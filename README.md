@@ -57,8 +57,8 @@ ai_todo_backend/
 
 ### 1. Clone the repository
 ```bash
-git clone <your-github-repo-url>
-cd ai_todo_backend
+git clone git@github.com:Kip-opp/Full-Auth-Flask-Backend--Productivity-App.git
+cd Full-Auth-Flask-Backend--Productivity-App
 ```
 
 ### 2. Create and activate a virtual environment
