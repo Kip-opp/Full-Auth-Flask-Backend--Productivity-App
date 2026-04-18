@@ -1,8 +1,9 @@
 from datetime import datetime
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, current_app
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from app.extensions import db
 from app.models.todo import Todo
+import requests
 
 todos_bp = Blueprint("todos", __name__)
 
@@ -31,19 +32,20 @@ def get_todos():
         query = query.filter(Todo.due_date.isnot(None), Todo.due_date < now)
 
     pagination = query.order_by(
-        Todo.due_date.asc().nullslast(),
-        Todo.created_at.desc()
+        Todo.due_date.asc().nullslast(), Todo.created_at.desc()
     ).paginate(page=page, per_page=per_page, error_out=False)
 
-    return jsonify({
-        "items": [todo.to_dict() for todo in pagination.items],
-        "page": pagination.page,
-        "per_page": pagination.per_page,
-        "total": pagination.total,
-        "pages": pagination.pages,
-        "has_next": pagination.has_next,
-        "has_prev": pagination.has_prev
-    }), 200
+    return jsonify(
+        {
+            "items": [todo.to_dict() for todo in pagination.items],
+            "page": pagination.page,
+            "per_page": pagination.per_page,
+            "total": pagination.total,
+            "pages": pagination.pages,
+            "has_next": pagination.has_next,
+            "has_prev": pagination.has_prev,
+        }
+    ), 200
 
 
 @todos_bp.post("")
@@ -69,7 +71,9 @@ def create_todo():
         try:
             due_date = datetime.fromisoformat(due_date_raw)
         except ValueError:
-            return jsonify({"error": "due_date must be a valid ISO datetime string"}), 400
+            return jsonify(
+                {"error": "due_date must be a valid ISO datetime string"}
+            ), 400
 
     todo = Todo(
         title=title,
@@ -77,16 +81,15 @@ def create_todo():
         notes=notes,
         priority=priority,
         due_date=due_date,
-        user_id=user_id
+        user_id=user_id,
     )
 
     db.session.add(todo)
     db.session.commit()
 
-    return jsonify({
-        "message": "Todo created successfully",
-        "todo": todo.to_dict()
-    }), 201
+    return jsonify(
+        {"message": "Todo created successfully", "todo": todo.to_dict()}
+    ), 201
 
 
 @todos_bp.get("/<int:todo_id>")
@@ -137,16 +140,17 @@ def update_todo(todo_id):
             try:
                 todo.due_date = datetime.fromisoformat(data["due_date"])
             except ValueError:
-                return jsonify({"error": "due_date must be a valid ISO datetime string"}), 400
+                return jsonify(
+                    {"error": "due_date must be a valid ISO datetime string"}
+                ), 400
         else:
             todo.due_date = None
 
     db.session.commit()
 
-    return jsonify({
-        "message": "Todo updated successfully",
-        "todo": todo.to_dict()
-    }), 200
+    return jsonify(
+        {"message": "Todo updated successfully", "todo": todo.to_dict()}
+    ), 200
 
 
 @todos_bp.delete("/<int:todo_id>")
@@ -162,3 +166,53 @@ def delete_todo(todo_id):
     db.session.commit()
 
     return jsonify({"message": "Todo deleted successfully"}), 200
+
+
+@todos_bp.post("/ai-help")
+@jwt_required()
+def ai_help():
+    user_id = int(get_jwt_identity())
+    data = request.get_json() or {}
+
+    prompt = data.get("prompt", "").strip()
+
+    if not prompt:
+        return jsonify({"error": "prompt is required"}), 400
+
+    # Get user's todos
+    todos = Todo.query.filter_by(user_id=user_id).all()
+    todos_text = "\n".join(
+        [
+            f"- {t.title}: {t.description or ''} (priority: {t.priority}, due: {t.due_date or 'no date'})"
+            for t in todos
+        ]
+    )
+
+    full_prompt = f"User's current todos:\n{todos_text}\n\nUser's request: {prompt}\n\nProvide helpful advice for managing their todos."
+
+    # Call xAI API
+    api_key = current_app.config.get("XAI_API_KEY")
+    if not api_key:
+        return jsonify({"error": "AI service not configured"}), 503
+
+    try:
+        response = requests.post(
+            f"{current_app.config['XAI_BASE_URL']}/chat/completions",
+            headers={
+                "Authorization": f"Bearer {api_key}",
+                "Content-Type": "application/json",
+            },
+            json={
+                "model": current_app.config["XAI_MODEL"],
+                "messages": [{"role": "user", "content": full_prompt}],
+            },
+        )
+    except requests.RequestException:
+        return jsonify({"error": "AI service unavailable"}), 503
+
+    if response.status_code != 200:
+        return jsonify({"error": "AI service unavailable"}), 503
+
+    ai_response = response.json()["choices"][0]["message"]["content"]
+
+    return jsonify({"response": ai_response}), 200

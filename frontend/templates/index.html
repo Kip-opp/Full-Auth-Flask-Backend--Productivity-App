@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI Todo App</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+</head>
+<body>
+  <div class="container">
+    <header class="hero">
+      <h1>AI Todo App</h1>
+      <p>Secure Flask backend with JWT auth, protected todos, notes, and AI help.</p>
+    </header>
+
+    <section class="grid">
+      <div class="card">
+        <h2>Sign Up</h2>
+        <form id="signup-form">
+          <input type="text" id="signup-username" placeholder="Username" required>
+          <input type="email" id="signup-email" placeholder="Email" required>
+          <input type="password" id="signup-password" placeholder="Password" required>
+          <button type="submit">Create Account</button>
+        </form>
+      </div>
+
+      <div class="card">
+        <h2>Login</h2>
+        <form id="login-form">
+          <input type="email" id="login-email" placeholder="Email" required>
+          <input type="password" id="login-password" placeholder="Password" required>
+          <button type="submit">Login</button>
+        </form>
+      </div>
+    </section>
+
+    <section class="card hidden" id="user-section">
+      <div class="row between">
+        <div>
+          <h2>Dashboard</h2>
+          <p id="current-user">Not logged in</p>
+        </div>
+        <button id="logout-btn" class="secondary">Logout</button>
+      </div>
+    </section>
+
+    <section class="grid hidden" id="app-section">
+      <div class="card">
+        <h2>Create Todo</h2>
+        <form id="todo-form">
+          <input type="text" id="todo-title" placeholder="Title" required>
+          <textarea id="todo-description" placeholder="Description"></textarea>
+          <textarea id="todo-notes" placeholder="Notes"></textarea>
+          <select id="todo-priority">
+            <option value="low">low</option>
+            <option value="medium" selected>medium</option>
+            <option value="high">high</option>
+          </select>
+          <input type="datetime-local" id="todo-due-date">
+          <button type="submit">Add Todo</button>
+        </form>
+      </div>
+
+      <div class="card">
+        <div class="row between">
+          <h2>Your Todos</h2>
+          <button id="refresh-btn" class="secondary">Refresh</button>
+        </div>
+        <div id="todo-list"></div>
+      </div>
+    </section>
+
+    <section class="card hidden" id="ai-section">
+      <h2>Ask Grok</h2>
+      <form id="ai-form">
+        <textarea id="ai-prompt" placeholder="Schedule my week, prioritize my tasks, or break one down..." required></textarea>
+        <button type="submit">Ask AI</button>
+      </form>
+      <pre id="ai-response"></pre>
+    </section>
+
+    <section class="card">
+      <h2>Status</h2>
+      <pre id="message-box">Ready.</pre>
+    </section>
+  </div>
+
+  <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+</html>
