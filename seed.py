@@ -10,69 +10,57 @@ with app.app_context():
     db.drop_all()
     db.create_all()
 
-    demo_password = bcrypt.generate_password_hash("password123").decode("utf-8")
-    alice_password = bcrypt.generate_password_hash("alice123").decode("utf-8")
-
     demo_user = User(
         username="demo",
         email="demo@example.com",
-        password_hash=demo_password
+        password_hash=bcrypt.generate_password_hash("password123").decode("utf-8"),
     )
 
-    alice_user = User(
-        username="alice",
-        email="alice@example.com",
-        password_hash=alice_password
+    notes_user = User(
+        username="kyp",
+        email="kyp@example.com",
+        password_hash=bcrypt.generate_password_hash("12345678").decode("utf-8"),
     )
 
-    db.session.add_all([demo_user, alice_user])
+    db.session.add_all([demo_user, notes_user])
     db.session.commit()
 
     todos = [
         Todo(
-            title="Finish project documentation",
-            description="Write README and endpoint documentation",
-            notes="Include installation, run steps, and Postman examples.",
+            title="Finish backend authentication",
+            description="Complete signup, login, and me endpoints",
+            notes="Test all auth endpoints in Postman and browser frontend.",
+            priority="high",
+            due_date=datetime.utcnow() + timedelta(days=1),
+            completed=False,
+            user_id=demo_user.id,
+        ),
+        Todo(
+            title="Build notes UI",
+            description="Add frontend form for notes and todo updates",
+            notes="Make sure notes save through PATCH and display on cards.",
+            priority="medium",
+            due_date=datetime.utcnow() + timedelta(days=3),
+            completed=False,
+            user_id=demo_user.id,
+        ),
+        Todo(
+            title="Prepare submission README",
+            description="Write installation, run steps, and endpoint list",
+            notes="Double-check rubric before final push.",
             priority="high",
             due_date=datetime.utcnow() + timedelta(days=2),
             completed=False,
-            user_id=demo_user.id
+            user_id=notes_user.id,
         ),
         Todo(
-            title="Prepare presentation",
-            description="Create talking points for backend demo",
-            notes="Show signup, login, me, and todo pagination in Postman.",
-            priority="medium",
-            due_date=datetime.utcnow() + timedelta(days=4),
-            completed=False,
-            user_id=demo_user.id
-        ),
-        Todo(
-            title="Study for exam",
-            description="Revise JWT auth, bcrypt, and migrations",
-            notes="Focus on protected routes and ownership checks.",
+            title="Review protected routes",
+            description="Ensure users only access their own records",
+            notes="Test with demo@example.com and kyp@example.com separately.",
             priority="high",
             due_date=datetime.utcnow() - timedelta(days=1),
             completed=False,
-            user_id=demo_user.id
-        ),
-        Todo(
-            title="Buy groceries",
-            description="Milk, bread, eggs, and fruit",
-            notes="Check budget before ordering online.",
-            priority="low",
-            due_date=datetime.utcnow() + timedelta(days=1),
-            completed=False,
-            user_id=alice_user.id
-        ),
-        Todo(
-            title="Workout session",
-            description="Leg day and stretching",
-            notes="Track progress and warm up properly.",
-            priority="medium",
-            due_date=datetime.utcnow() + timedelta(days=3),
-            completed=True,
-            user_id=alice_user.id
+            user_id=notes_user.id,
         ),
     ]
 
@@ -80,5 +68,5 @@ with app.app_context():
     db.session.commit()
 
     print("Database seeded successfully.")
-    print("Demo user: demo@example.com / password123")
-    print("Alice user: alice@example.com / alice123")
+    print("demo@example.com / password123")
+    print("kyp@example.com / 12345678")
