@@ -1,13 +1,29 @@
 const messageBox = document.getElementById("message-box");
-const userSection = document.getElementById("user-section");
-const appSection = document.getElementById("app-section");
-const aiSection = document.getElementById("ai-section");
+const authShell = document.getElementById("auth-shell");
+const dashboardShell = document.getElementById("dashboard-shell");
 const currentUserText = document.getElementById("current-user");
 const todoList = document.getElementById("todo-list");
 const aiResponse = document.getElementById("ai-response");
 
+const loginForm = document.getElementById("login-form");
+const signupForm = document.getElementById("signup-form");
+const showLoginBtn = document.getElementById("show-login");
+const showSignupBtn = document.getElementById("show-signup");
+
+const todoForm = document.getElementById("todo-form");
+const editTodoIdInput = document.getElementById("edit-todo-id");
+const todoFormTitle = document.getElementById("todo-form-title");
+const todoSubmitBtn = document.getElementById("todo-submit-btn");
+const cancelEditBtn = document.getElementById("cancel-edit-btn");
+
+const statTotal = document.getElementById("stat-total");
+const statPending = document.getElementById("stat-pending");
+const statCompleted = document.getElementById("stat-completed");
+const statHigh = document.getElementById("stat-high");
+
 function setMessage(message) {
-  messageBox.textContent = typeof message === "string" ? message : JSON.stringify(message, null, 2);
+  messageBox.textContent =
+    typeof message === "string" ? message : JSON.stringify(message, null, 2);
 }
 
 function getToken() {
@@ -25,20 +41,75 @@ function clearToken() {
 function authHeaders() {
   return {
     "Content-Type": "application/json",
-    "Authorization": `Bearer ${getToken()}`
+    Authorization: `Bearer ${getToken()}`
   };
 }
 
-function showApp() {
-  userSection.classList.remove("hidden");
-  appSection.classList.remove("hidden");
-  aiSection.classList.remove("hidden");
+function showLoginView() {
+  loginForm.classList.remove("hidden");
+  signupForm.classList.add("hidden");
+  showLoginBtn.classList.add("active");
+  showSignupBtn.classList.remove("active");
 }
 
-function hideApp() {
-  userSection.classList.add("hidden");
-  appSection.classList.add("hidden");
-  aiSection.classList.add("hidden");
+function showSignupView() {
+  signupForm.classList.remove("hidden");
+  loginForm.classList.add("hidden");
+  showSignupBtn.classList.add("active");
+  showLoginBtn.classList.remove("active");
+}
+
+function showDashboard() {
+  authShell.classList.add("hidden");
+  dashboardShell.classList.remove("hidden");
+}
+
+function showAuth() {
+  dashboardShell.classList.add("hidden");
+  authShell.classList.remove("hidden");
+}
+
+function resetTodoForm() {
+  todoForm.reset();
+  editTodoIdInput.value = "";
+  todoFormTitle.textContent = "Create Todo";
+  todoSubmitBtn.textContent = "Add Todo";
+  cancelEditBtn.classList.add("hidden");
+}
+
+function populateTodoForm(todo) {
+  editTodoIdInput.value = todo.id;
+  document.getElementById("todo-title").value = todo.title || "";
+  document.getElementById("todo-description").value = todo.description || "";
+  document.getElementById("todo-notes").value = todo.notes || "";
+  document.getElementById("todo-priority").value = todo.priority || "medium";
+
+  if (todo.due_date) {
+    const date = new Date(todo.due_date);
+    const local = new Date(date.getTime() - date.getTimezoneOffset() * 60000)
+      .toISOString()
+      .slice(0, 16);
+    document.getElementById("todo-due-date").value = local;
+  } else {
+    document.getElementById("todo-due-date").value = "";
+  }
+
+  todoFormTitle.textContent = "Update Todo";
+  todoSubmitBtn.textContent = "Update Todo";
+  cancelEditBtn.classList.remove("hidden");
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+function updateStats(todos) {
+  const total = todos.length;
+  const completed = todos.filter((todo) => todo.completed).length;
+  const pending = total - completed;
+  const high = todos.filter((todo) => todo.priority === "high").length;
+
+  statTotal.textContent = total;
+  statPending.textContent = pending;
+  statCompleted.textContent = completed;
+  statHigh.textContent = high;
 }
 
 async function handleResponse(res) {
@@ -49,7 +120,10 @@ async function handleResponse(res) {
   return data;
 }
 
-document.getElementById("signup-form").addEventListener("submit", async (e) => {
+showLoginBtn.addEventListener("click", showLoginView);
+showSignupBtn.addEventListener("click", showSignupView);
+
+signupForm.addEventListener("submit", async (e) => {
   e.preventDefault();
 
   const payload = {
@@ -66,14 +140,15 @@ document.getElementById("signup-form").addEventListener("submit", async (e) => {
     });
 
     const data = await handleResponse(res);
-    setMessage(data);
-    e.target.reset();
+    setMessage(data.message || "Signup successful. You can now log in.");
+    signupForm.reset();
+    showLoginView();
   } catch (error) {
     setMessage(error.message);
   }
 });
 
-document.getElementById("login-form").addEventListener("submit", async (e) => {
+loginForm.addEventListener("submit", async (e) => {
   e.preventDefault();
 
   const payload = {
@@ -90,8 +165,8 @@ document.getElementById("login-form").addEventListener("submit", async (e) => {
 
     const data = await handleResponse(res);
     setToken(data.access_token);
-    setMessage(data);
-    e.target.reset();
+    loginForm.reset();
+    setMessage("Login successful.");
 
     await loadCurrentUser();
     await loadTodos();
@@ -100,9 +175,10 @@ document.getElementById("login-form").addEventListener("submit", async (e) => {
   }
 });
 
-document.getElementById("todo-form").addEventListener("submit", async (e) => {
+todoForm.addEventListener("submit", async (e) => {
   e.preventDefault();
 
+  const todoId = editTodoIdInput.value.trim();
   const dueInput = document.getElementById("todo-due-date").value;
 
   const payload = {
@@ -114,19 +190,42 @@ document.getElementById("todo-form").addEventListener("submit", async (e) => {
   };
 
   try {
-    const res = await fetch("/api/todos", {
-      method: "POST",
+    const isEditing = Boolean(todoId);
+
+    const res = await fetch(isEditing ? `/api/todos/${todoId}` : "/api/todos", {
+      method: isEditing ? "PATCH" : "POST",
       headers: authHeaders(),
       body: JSON.stringify(payload)
     });
 
     const data = await handleResponse(res);
-    setMessage(data);
-    e.target.reset();
+
+    setMessage(
+      data.message || (isEditing ? "Todo updated successfully." : "Todo created successfully.")
+    );
+
+    resetTodoForm();
     await loadTodos();
   } catch (error) {
     setMessage(error.message);
   }
+});
+
+cancelEditBtn.addEventListener("click", resetTodoForm);
+
+document.getElementById("refresh-btn").addEventListener("click", async () => {
+  await loadTodos();
+});
+
+document.getElementById("logout-btn").addEventListener("click", () => {
+  clearToken();
+  currentUserText.textContent = "Not logged in";
+  todoList.innerHTML = "";
+  aiResponse.textContent = "No AI response yet.";
+  resetTodoForm();
+  setMessage("Logged out.");
+  showAuth();
+  showLoginView();
 });
 
 document.getElementById("ai-form").addEventListener("submit", async (e) => {
@@ -151,23 +250,18 @@ document.getElementById("ai-form").addEventListener("submit", async (e) => {
   }
 });
 
-document.getElementById("refresh-btn").addEventListener("click", async () => {
-  await loadTodos();
-});
-
-document.getElementById("logout-btn").addEventListener("click", () => {
-  clearToken();
-  hideApp();
-  currentUserText.textContent = "Not logged in";
-  todoList.innerHTML = "";
-  aiResponse.textContent = "";
-  setMessage("Logged out.");
+document.querySelectorAll(".chip-btn").forEach((btn) => {
+  btn.addEventListener("click", () => {
+    document.getElementById("ai-prompt").value = btn.textContent;
+  });
 });
 
 async function loadCurrentUser() {
   const token = getToken();
+
   if (!token) {
-    hideApp();
+    showAuth();
+    showLoginView();
     return;
   }
 
@@ -178,23 +272,26 @@ async function loadCurrentUser() {
 
     const user = await handleResponse(res);
     currentUserText.textContent = `Logged in as ${user.username} (${user.email})`;
-    showApp();
+    showDashboard();
   } catch (error) {
     clearToken();
-    hideApp();
+    showAuth();
+    showLoginView();
     setMessage(error.message);
   }
 }
 
 async function loadTodos(page = 1) {
   try {
-    const res = await fetch(`/api/todos?page=${page}&per_page=10`, {
+    const res = await fetch(`/api/todos?page=${page}&per_page=20`, {
       headers: authHeaders()
     });
 
     const data = await handleResponse(res);
-    renderTodos(data.items || []);
-    setMessage(data);
+    const todos = data.items || [];
+    renderTodos(todos);
+    updateStats(todos);
+    setMessage("Todos loaded.");
   } catch (error) {
     setMessage(error.message);
   }
@@ -204,7 +301,8 @@ function renderTodos(todos) {
   todoList.innerHTML = "";
 
   if (!todos.length) {
-    todoList.innerHTML = "<p>No todos yet.</p>";
+    todoList.innerHTML = `<div class="todo-item"><p>No todos yet. Create your first task.</p></div>`;
+    updateStats([]);
     return;
   }
 
@@ -213,7 +311,10 @@ function renderTodos(todos) {
     item.className = "todo-item";
 
     item.innerHTML = `
-      <h3>${todo.title}</h3>
+      <div class="todo-header">
+        <h3>${todo.title}</h3>
+        <button class="icon-btn edit-btn" type="button" data-id="${todo.id}" aria-label="Edit todo">✎</button>
+      </div>
       <div class="todo-meta">
         Priority: ${todo.priority} |
         Completed: ${todo.completed ? "Yes" : "No"} |
@@ -222,12 +323,24 @@ function renderTodos(todos) {
       <p><strong>Description:</strong> ${todo.description || "-"}</p>
       <p><strong>Notes:</strong> ${todo.notes || "-"}</p>
       <div class="todo-actions">
-        <button data-id="${todo.id}" class="complete-btn">Complete</button>
-        <button data-id="${todo.id}" class="delete-btn">Delete</button>
+        <button data-id="${todo.id}" class="complete-btn" type="button">Complete</button>
+        <button data-id="${todo.id}" class="delete-btn" type="button">Delete</button>
       </div>
     `;
 
     todoList.appendChild(item);
+  });
+
+  document.querySelectorAll(".edit-btn").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const id = Number(btn.dataset.id);
+      const selectedTodo = todos.find((todo) => todo.id === id);
+
+      if (!selectedTodo) return;
+
+      populateTodoForm(selectedTodo);
+      setMessage(`Editing "${selectedTodo.title}"`);
+    });
   });
 
   document.querySelectorAll(".complete-btn").forEach((btn) => {
@@ -241,8 +354,8 @@ function renderTodos(todos) {
           body: JSON.stringify({ completed: true })
         });
 
-        const data = await handleResponse(res);
-        setMessage(data);
+        await handleResponse(res);
+        setMessage("Todo marked complete.");
         await loadTodos();
       } catch (error) {
         setMessage(error.message);
@@ -260,8 +373,8 @@ function renderTodos(todos) {
           headers: authHeaders()
         });
 
-        const data = await handleResponse(res);
-        setMessage(data);
+        await handleResponse(res);
+        setMessage("Todo deleted.");
         await loadTodos();
       } catch (error) {
         setMessage(error.message);
@@ -271,7 +384,11 @@ function renderTodos(todos) {
 }
 
 window.addEventListener("DOMContentLoaded", async () => {
+  showAuth();
+  showLoginView();
+  resetTodoForm();
   await loadCurrentUser();
+
   if (getToken()) {
     await loadTodos();
   }
