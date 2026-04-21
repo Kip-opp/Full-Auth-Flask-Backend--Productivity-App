@@ -3,7 +3,10 @@
  * Handles all HTTP requests to the backend
  */
 
-const API_URL = 'http://localhost:5000/api';
+// Change this to your production backend URL when deploying
+const API_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' 
+    ? 'http://localhost:5000/api' 
+    : 'https://your-production-api-url.com/api';
 
 class APIService {
     constructor() {
@@ -42,7 +45,9 @@ class APIService {
             const data = await response.json();
 
             if (!response.ok) {
-                throw new Error(data.error?.message || 'Request failed');
+                const err = new Error(data.error?.message || 'Request failed');
+                err.details = data.error?.details || null;
+                throw err;
             }
 
             return data;

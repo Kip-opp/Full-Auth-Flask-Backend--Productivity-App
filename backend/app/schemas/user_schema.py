@@ -28,8 +28,6 @@ class SignupSchema(Schema):
         error_messages={'required': 'Password is required'}
     )
 
-    class Meta:
-        strict = True
 
 
 class LoginSchema(Schema):
@@ -37,5 +35,3 @@ class LoginSchema(Schema):
     username = fields.Str(required=True)
     password = fields.Str(required=True)
 
-    class Meta:
-        strict = True
