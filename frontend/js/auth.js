@@ -5,6 +5,7 @@
 
 const authModule = (() => {
     let currentUser = null;
+    let isSignup = false;
 
     const init = async () => {
         const token = localStorage.getItem('token');
@@ -33,8 +34,6 @@ const authModule = (() => {
         document.getElementById('dashboard-container').style.display = 'block';
         renderDashboard();
     };
-
-    let isSignup = false;
 
     const renderAuthPage = () => {
         const container = document.getElementById('auth-container');
@@ -94,12 +93,24 @@ const authModule = (() => {
     };
 
     const updateAuthForm = () => {
-        document.getElementById('signup-fields').style.display = isSignup ? 'block' : 'none';
-        document.getElementById('login-fields').style.display = isSignup ? 'none' : 'block';
+        const signupFields = document.getElementById('signup-fields');
+        const loginFields = document.getElementById('login-fields');
+
+        const username = document.getElementById('username');
+        const email = document.getElementById('email');
+        const loginUsername = document.getElementById('login-username');
+
+        signupFields.style.display = isSignup ? 'block' : 'none';
+        loginFields.style.display = isSignup ? 'none' : 'block';
+
+        username.required = isSignup;
+        email.required = isSignup;
+        loginUsername.required = !isSignup;
+
         document.getElementById('auth-button-text').textContent = isSignup ? 'Sign Up' : 'Login';
         document.getElementById('auth-toggle-text').innerHTML = isSignup
             ? 'Already have an account? <a href="#" id="auth-toggle">Login</a>'
-            : 'Don\\'t have an account? <a href="#" id="auth-toggle">Sign Up</a>';
+            : `Don't have an account? <a href="#" id="auth-toggle">Sign Up</a>`;
 
         document.getElementById('auth-toggle').addEventListener('click', (e) => {
             e.preventDefault();
@@ -129,7 +140,16 @@ const authModule = (() => {
             showDashboard();
         } catch (error) {
             messageEl.className = 'alert alert-error';
-            messageEl.textContent = error.message;
+
+            if (error.details) {
+                const messages = Object.entries(error.details)
+                    .map(([field, msgs]) => `${field}: ${msgs.join(', ')}`)
+                    .join(' | ');
+                messageEl.textContent = messages;
+            } else {
+                messageEl.textContent = error.message;
+            }
+
             messageEl.style.display = 'block';
         }
     };
