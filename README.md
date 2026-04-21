@@ -1,4 +1,4 @@
-# Standalone Full-Stack Notes Application
+# Full-Stack Notes Application
 
 A complete, production-ready Notes application with JWT authentication, user-owned CRUD operations, pagination, and a polished dashboard. This application runs entirely locally without any platform dependencies.
 
