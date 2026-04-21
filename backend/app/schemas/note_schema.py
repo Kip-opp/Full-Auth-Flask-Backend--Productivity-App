@@ -30,8 +30,6 @@ class NoteCreateSchema(Schema):
         validate=validate.OneOf(['active', 'archived'])
     )
 
-    class Meta:
-        strict = True
 
 
 class NoteUpdateSchema(Schema):
@@ -46,5 +44,3 @@ class NoteUpdateSchema(Schema):
         validate=validate.OneOf(['active', 'archived'])
     )
 
-    class Meta:
-        strict = True
