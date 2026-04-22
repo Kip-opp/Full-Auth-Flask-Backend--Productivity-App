@@ -2,7 +2,6 @@
 
 A complete, production-ready notes application built with Flask (backend) and vanilla JavaScript (frontend). Features JWT authentication, token revocation, and full CRUD operations for notes management.
 
-**Original Repository**: [https://github.com/Kip-opp/Full-Auth-Flask-Backend--Productivity-App.git](https://github.com/Kip-opp/Full-Auth-Flask-Backend--Productivity-App.git)
 
 ## 🚀 Features
 
