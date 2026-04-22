@@ -1,5 +1,4 @@
 /**
- * Notes Module
  * Handles notes CRUD operations and display
  */
 
