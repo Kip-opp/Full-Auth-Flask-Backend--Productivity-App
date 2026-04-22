@@ -75,7 +75,7 @@ notes-app/
 │   ├── seed.py                # Database seeding
 │   ├── Pipfile               # Dependencies
 │   └── README.md             # Backend documentation
-├── frontend/                   # Static frontend files
+├── client-with-jwt/                   # Static frontend files
 │   ├── index.html            # Main HTML file
 │   ├── css/
 │   │   ├── style.css         # Main styles
