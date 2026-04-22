@@ -154,6 +154,13 @@ const authModule = (() => {
         }
     };
 
+    const confirmLogout = async () => {
+        const confirmed = window.confirm('Are you sure you want to logout?');
+        if (!confirmed) return;
+
+        await logout();
+    };
+
     const logout = async () => {
         try {
             await api.logout();
@@ -173,6 +180,7 @@ const authModule = (() => {
     return {
         init,
         logout,
+        confirmLogout,
         getCurrentUser,
         showDashboard,
     };
@@ -189,7 +197,7 @@ const renderDashboard = () => {
                 <ul class="sidebar-menu">
                     <li><a href="#" class="nav-link active" data-page="notes">My Notes</a></li>
                     <li><a href="#" class="nav-link" data-page="archived">Archived</a></li>
-                    <li><a href="#" class="nav-link" onclick="authModule.logout(); return false;">Logout</a></li>
+                    <li><a href="#" class="nav-link" onclick="authModule.confirmLogout(); return false;">Logout</a></li>
                 </ul>
             </div>
             
