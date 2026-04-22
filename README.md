@@ -2,6 +2,7 @@
 
 A complete, production-ready notes application built with Flask (backend) and vanilla JavaScript (frontend). Features JWT authentication, token revocation, and full CRUD operations for notes management.
 
+
 ## 🚀 Features
 
 ### Backend (Flask)
@@ -20,15 +21,17 @@ A complete, production-ready notes application built with Flask (backend) and va
 - Responsive design
 - Real-time updates
 - Clean, intuitive UI
+- Logout confirmation dialog
 
 ## 🛠 Tech Stack
 
 ### Backend
-- **Python 3.10+**
+- **Python 3.8+**
 - **Flask** - Web framework
 - **Flask-SQLAlchemy** - ORM
 - **Flask-Migrate** - Database migrations
-- **Flask-JWT-Extended** - JWT authentication
+- **Flask-Bcrypt** - Password hashing
+- **PyJWT** - JWT authentication
 - **Flask-CORS** - Cross-origin resource sharing
 - **Pipenv** - Dependency management
 - **SQLite** - Database (development)
@@ -82,31 +85,36 @@ notes-app/
 │       ├── auth.js          # Authentication module
 │       ├── notes.js         # Notes module
 │       └── main.js          # Application entry point
-├── database/
-│   └── schema.sql           # Database schema
 └── README.md               # This file
 ```
 
 ## 🚀 Quick Start
 
 ### Prerequisites
-- Python 3.10 or higher
-- Node.js (for serving frontend, optional)
+- Python 3.8 or higher
+- Pipenv (`pip install pipenv`)
 
 ### 1. Backend Setup
 
 ```bash
+# Clone the repository
+git clone https://github.com/Kip-opp/Full-Auth-Flask-Backend--Productivity-App.git
+cd Full-Auth-Flask-Backend--Productivity-App
+
 # Navigate to backend directory
 cd backend
 
 # Install dependencies
 pipenv install
 
-# Configure environment
+# Configure environment (optional)
 cp .env.example .env
 
-# Seed database
+# Seed database with demo users
 pipenv run python seed.py
+
+# Initialize database migrations
+pipenv run flask db upgrade
 
 # Start development server
 pipenv run python run.py
@@ -136,10 +144,9 @@ Copy `.env.example` to `.env` and configure:
 ```bash
 # Backend (.env)
 SECRET_KEY=your-secret-key-here
-DATABASE_URL=sqlite:///instance/notes_app.db
 JWT_SECRET_KEY=your-jwt-secret-key
-JWT_ACCESS_TOKEN_EXPIRES=3600
-JWT_REFRESH_TOKEN_EXPIRES=2592000
+JWT_EXPIRATION_HOURS=168
+CORS_ORIGINS=http://localhost:3000,http://localhost:8000,http://localhost:5500
 ```
 
 ## 📚 API Documentation
@@ -150,28 +157,23 @@ JWT_REFRESH_TOKEN_EXPIRES=2592000
 Register a new user
 ```json
 {
-  "email": "user@example.com",
-  "password": "password123",
-  "name": "John Doe"
-}
-```
-
-#### POST /api/auth/login
-Authenticate user and get tokens
-```json
-{
+  "username": "testuser",
   "email": "user@example.com",
   "password": "password123"
 }
 ```
 
-#### POST /api/auth/logout
-Logout user (requires valid JWT)
+#### POST /api/auth/login
+Authenticate user and get token
 ```json
 {
-  "token": "your-jwt-token"
+  "username": "testuser",
+  "password": "password123"
 }
 ```
+
+#### POST /api/auth/logout
+Logout user (requires valid JWT in Authorization header)
 
 #### GET /api/auth/me
 Get current user info (requires valid JWT)
@@ -180,7 +182,7 @@ Get current user info (requires valid JWT)
 
 #### GET /api/notes
 Get all notes for current user
-- Query params: `page`, `limit`, `status`
+- Query params: `page`, `per_page`, `status`
 
 #### POST /api/notes
 Create a new note
@@ -213,37 +215,38 @@ Delete a note
 ### Users Table
 ```sql
 CREATE TABLE users (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  email VARCHAR(255) UNIQUE NOT NULL,
-  password VARCHAR(255) NOT NULL,
-  name VARCHAR(255),
-  createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+  id INTEGER PRIMARY KEY,
+  username VARCHAR(80) UNIQUE NOT NULL,
+  email VARCHAR(120) UNIQUE NOT NULL,
+  password_hash VARCHAR(255) NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 ```
 
 ### Notes Table
 ```sql
 CREATE TABLE notes (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  userId INT NOT NULL,
+  id INTEGER PRIMARY KEY,
+  user_id INTEGER NOT NULL,
   title VARCHAR(255) NOT NULL,
-  content LONGTEXT NOT NULL,
-  status ENUM('active', 'archived') DEFAULT 'active',
-  createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  FOREIGN KEY (userId) REFERENCES users(id) ON DELETE CASCADE
+  content TEXT NOT NULL,
+  status VARCHAR(20) DEFAULT 'active',
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 ```
 
 ### Token Blocklist Table
 ```sql
-CREATE TABLE tokenBlocklist (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  token LONGTEXT NOT NULL,
-  userId INT NOT NULL,
-  expiresAt TIMESTAMP NOT NULL,
-  createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+CREATE TABLE token_blocklist (
+  id INTEGER PRIMARY KEY,
+  token TEXT NOT NULL,
+  user_id INTEGER NOT NULL,
+  expires_at TIMESTAMP NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 ```
 
@@ -261,10 +264,10 @@ Manual testing through the browser interface.
 ## 🎯 Demo
 
 ### Demo Credentials
-- **Email**: alice@example.com
+- **Username**: alice
 - **Password**: password123
 
-- **Email**: bob@example.com  
+- **Username**: bob  
 - **Password**: password123
 
 ## 🔒 Security Features
@@ -274,6 +277,8 @@ Manual testing through the browser interface.
 - Password hashing with bcrypt
 - CORS protection
 - Input validation and sanitization
+- Field-specific error messages
+- Form validation with required field toggling
 
 ## 🚀 Deployment
 
@@ -284,9 +289,8 @@ Manual testing through the browser interface.
 4. Set up production database (PostgreSQL)
 
 ### Frontend Deployment
-1. Build static files
-2. Serve through CDN or web server
-3. Configure CORS for production backend
+1. Serve static files through CDN or web server
+2. Update `API_URL` in `frontend/js/api.js` to your production backend
 
 ## 🤝 Contributing
 
