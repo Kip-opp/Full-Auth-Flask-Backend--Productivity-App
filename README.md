@@ -75,7 +75,7 @@ notes-app/
 │   ├── seed.py                # Database seeding
 │   ├── Pipfile               # Dependencies
 │   └── README.md             # Backend documentation
-├── frontend/                   # Static frontend files
+├── client-with-jwt/                   # Static frontend files
 │   ├── index.html            # Main HTML file
 │   ├── css/
 │   │   ├── style.css         # Main styles
@@ -252,47 +252,14 @@ CREATE TABLE token_blocklist (
 
 ## 🧪 Testing
 
-### Backend Testing
-Run automated tests using pytest:
-
+### Backend Tests
 ```bash
 cd backend
 pipenv run pytest
 ```
 
-To run specific test files:
-```bash
-pipenv run pytest tests/test_auth.py
-pipenv run pytest tests/test_notes.py
-```
-
-For test coverage:
-```bash
-pipenv run pytest --cov=app
-```
-
 ### Frontend Testing
-Perform manual testing through the browser interface:
-
-- **Authentication**: Test user signup, login, and logout. Verify JWT token storage and revocation.
-- **Notes CRUD**: Create, read, update, and delete notes. Check pagination and filtering by status (active/archived).
-- **Error Handling**: Test invalid inputs, unauthorized access, and network errors.
-
-### API Testing
-Use curl to test API endpoints directly:
-
-Login and get token:
-```bash
-curl -X POST http://localhost:5000/api/auth/login 
-  -H "Content-Type: application/json" 
-  -d '{"username": "alice", "password": "password123"}'
-```
-
-Get notes (replace TOKEN with actual JWT):
-```bash
-curl -X GET http://localhost:5000/api/notes 
-  -H "Authorization: Bearer TOKEN"
-```
+Manual testing through the browser interface.
 
 ## 🎯 Demo
 
