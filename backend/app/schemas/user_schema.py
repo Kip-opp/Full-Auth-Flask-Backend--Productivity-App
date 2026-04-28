@@ -32,6 +32,6 @@ class SignupSchema(Schema):
 
 class LoginSchema(Schema):
     """Schema for login request validation."""
-    username = fields.Str(required=True)
+    email = fields.Email(required=True)
     password = fields.Str(required=True)
 

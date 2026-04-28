@@ -16,91 +16,91 @@ def seed_database():
 
         print('🌱 Seeding database...')
 
-        alice = User(
-            username='alice',
-            email='alice@example.com'
+        demo_user = User(
+            username='demo_user',
+            email='demo@example.com'
         )
-        alice.set_password('password123')
-        
-        bob = User(
-            username='bob',
-            email='bob@example.com'
-        )
-        bob.set_password('password123')
+        demo_user.set_password('demopass123')
 
-        db.session.add(alice)
-        db.session.add(bob)
+        test_user = User(
+            username='test_user',
+            email='test@example.com'
+        )
+        test_user.set_password('testpass123')
+
+        db.session.add(demo_user)
+        db.session.add(test_user)
         db.session.commit()
 
-        print(f'✅ Created users: alice, bob')
+        print(f'✅ Created users: demo_user, test_user')
 
-        alice_notes = [
+        demo_notes = [
             Note(
-                user_id=alice.id,
+                user_id=demo_user.id,
                 title='Project Planning',
                 content='Outline for Q2 roadmap and feature prioritization.',
                 status='active'
             ),
             Note(
-                user_id=alice.id,
+                user_id=demo_user.id,
                 title='Meeting Notes',
                 content='Discussed sprint planning and team capacity.',
                 status='active'
             ),
             Note(
-                user_id=alice.id,
+                user_id=demo_user.id,
                 title='UI Improvements',
                 content='Ideas for improving user interface and experience.',
                 status='active'
             ),
             Note(
-                user_id=alice.id,
+                user_id=demo_user.id,
                 title='Learning Resources',
                 content='React and TypeScript guides for team development.',
                 status='archived'
             ),
             Note(
-                user_id=alice.id,
+                user_id=demo_user.id,
                 title='Personal Goals',
                 content='Career development objectives for 2024.',
                 status='active'
             ),
         ]
 
-        for note in alice_notes:
+        for note in demo_notes:
             db.session.add(note)
 
-        bob_notes = [
+        test_notes = [
             Note(
-                user_id=bob.id,
+                user_id=test_user.id,
                 title='Database Schema',
                 content='Current database schema design and optimization.',
                 status='active'
             ),
             Note(
-                user_id=bob.id,
+                user_id=test_user.id,
                 title='API Documentation',
                 content='Endpoints to document and API reference guide.',
                 status='active'
             ),
             Note(
-                user_id=bob.id,
+                user_id=test_user.id,
                 title='Deployment Checklist',
                 content='Pre-deployment tasks and verification steps.',
                 status='archived'
             ),
         ]
 
-        for note in bob_notes:
+        for note in test_notes:
             db.session.add(note)
 
         db.session.commit()
 
-        print(f'✅ Created {len(alice_notes)} notes for alice')
-        print(f'✅ Created {len(bob_notes)} notes for bob')
+        print(f'✅ Created {len(demo_notes)} notes for demo_user')
+        print(f'✅ Created {len(test_notes)} notes for test_user')
         print('\n📝 Demo Credentials:')
-        print('   alice / password123')
-        print('   bob / password123')
+        print('   demo@example.com / demopass123')
+        print('   test@example.com / testpass123')
         print('\n✨ Database seeding complete!')
 
 
