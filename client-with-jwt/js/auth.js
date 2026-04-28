@@ -58,8 +58,8 @@ const authModule = (() => {
 
                         <div id="login-fields">
                             <div class="form-group">
-                                <label for="login-username">Username</label>
-                                <input type="text" id="login-username" name="username" required>
+                                <label for="login-email">Email</label>
+                                <input type="email" id="login-email" name="email" required>
                             </div>
                         </div>
 
@@ -98,14 +98,14 @@ const authModule = (() => {
 
         const username = document.getElementById('username');
         const email = document.getElementById('email');
-        const loginUsername = document.getElementById('login-username');
+        const loginEmail = document.getElementById('login-email');
 
         signupFields.style.display = isSignup ? 'block' : 'none';
         loginFields.style.display = isSignup ? 'none' : 'block';
 
         username.required = isSignup;
         email.required = isSignup;
-        loginUsername.required = !isSignup;
+        loginEmail.required = !isSignup;
 
         document.getElementById('auth-button-text').textContent = isSignup ? 'Sign Up' : 'Login';
         document.getElementById('auth-toggle-text').innerHTML = isSignup
@@ -131,7 +131,7 @@ const authModule = (() => {
                     document.getElementById('password').value
                 )
                 : await api.login(
-                    document.getElementById('login-username').value,
+                    document.getElementById('login-email').value,
                     document.getElementById('password').value
                 );
 

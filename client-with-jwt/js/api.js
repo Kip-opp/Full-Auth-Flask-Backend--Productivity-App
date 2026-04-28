@@ -65,10 +65,10 @@ class APIService {
         });
     }
 
-    async login(username, password) {
+    async login(email, password) {
         return this.request('/auth/login', {
             method: 'POST',
-            body: JSON.stringify({ username, password }),
+            body: JSON.stringify({ email, password }),
         });
     }
 
