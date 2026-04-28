@@ -75,12 +75,12 @@ def login():
     except ValidationError as err:
         return validation_error_response(err.messages, 400)
 
-    user = User.query.filter_by(username=data['username']).first()
-    
+    user = User.query.filter_by(email=data['email']).first()
+
     if not user or not user.check_password(data['password']):
         return error_response(
             'INVALID_CREDENTIALS',
-            'Invalid username or password',
+            'Invalid email or password',
             401
         )
 
