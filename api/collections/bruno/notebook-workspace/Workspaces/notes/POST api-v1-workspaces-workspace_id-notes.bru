@@ -1,0 +1,24 @@
+meta {
+{'type': 'http', 'name': 'Create a notebook note', 'seq': 0}
+}
+
+vars {
+{'token': '{{token}}'}
+}
+
+auth {
+{'bearer': {'token': '{{token}}'}}
+}
+
+{{
+  method: POST
+  url: {{base_url}}/api/v1/workspaces/{{workspace_id}}/notes
+  body: json
+}
+
+body:json {
+  {
+    "title": "Architecture decision",
+    "content": "Use durable jobs."
+  }
+}

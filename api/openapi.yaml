@@ -1,0 +1,1306 @@
+openapi: 3.0.3
+info:
+  title: Notebook Workspace API
+  version: "1.0.0"
+  description: |
+    Source-grounded notebook workspace API on top of the legacy Flask
+    authentication and notes application.
+
+    - Legacy contracts under `/api/auth/*` and `/api/notes/*` are
+      preserved and described in this document so the backend can be
+      exercised from a single API client.
+    - New capabilities are versioned under `/api/v1/*` and use the
+      `Authorization: Bearer <token>` header on every protected route.
+    - All responses use the standard envelope:
+      `{ "success": true, "message": "...", "data": ... }` on success
+      and `{ "success": false, "error": { "code": "...", "message": "...", "details": ... } }` on failure.
+    - Cross-user and cross-workspace IDs return `404`; the API never
+      discloses whether an ID exists in another account.
+  contact:
+    name: Notebook Workspace
+    url: https://github.com/local/Full-Auth-Flask-Backend--Productivity-App
+  license:
+    name: MIT
+servers:
+  - url: http://localhost:5000
+    description: Local development
+tags:
+  - name: Health
+  - name: Auth
+    description: Legacy authentication endpoints.
+  - name: Notes
+    description: Legacy personal notes CRUD (paginated, owned by the user).
+  - name: Workspaces
+    description: Top-level tenant containers that own sources, notes, artifacts, queries, and jobs.
+  - name: Sources
+    description: HTTP(S) URLs ingested into a workspace.
+  - name: Artifacts
+    description: Generated deliverables (slides, mindmap, table, quiz, summary).
+  - name: WorkspaceNotes
+    description: Notebook-style notes written inside a workspace.
+  - name: Queries
+    description: Grounded Q&A over a workspace's ready sources and active notes.
+  - name: Jobs
+    description: Asynchronous job records and a local-only execution hook.
+security: []
+paths:
+  /api/health:
+    get:
+      tags: [Health]
+      summary: Liveness probe
+      security: []
+      responses:
+        "200":
+          description: API is up
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [status]
+                properties:
+                  status:
+                    type: string
+                    enum: [ok]
+  /api/auth/signup:
+    post:
+      tags: [Auth]
+      summary: Register a new user
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SignupRequest"
+      responses:
+        "201":
+          description: User created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "409":
+          description: Username or email already exists
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+  /api/auth/login:
+    post:
+      tags: [Auth]
+      summary: Exchange credentials for a JWT
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginRequest"
+      responses:
+        "200":
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+  /api/auth/logout:
+    post:
+      tags: [Auth]
+      summary: Revoke the current JWT
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Logout successful
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+  /api/auth/me:
+    get:
+      tags: [Auth]
+      summary: Current authenticated user
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: User retrieved
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/User"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+  /api/auth/google/config:
+    get:
+      tags: [Auth]
+      summary: Google sign-in availability
+      security: []
+      responses:
+        "200":
+          description: Google sign-in is configured
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        required: [enabled, client_id]
+                        properties:
+                          enabled:
+                            type: boolean
+                          client_id:
+                            type: string
+        "404":
+          description: Google sign-in is not configured
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+  /api/auth/google:
+    post:
+      tags: [Auth]
+      summary: Authenticate with a Google id_token or access_token
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                id_token:
+                  type: string
+                access_token:
+                  type: string
+              description: Provide exactly one of `id_token` or `access_token`.
+      responses:
+        "200":
+          description: Google sign-in successful
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "400":
+          description: Missing or invalid Google token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "401":
+          description: Google token rejected
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "404":
+          description: Google sign-in is not configured
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+  /api/notes:
+    get:
+      tags: [Notes]
+      summary: List the authenticated user's notes
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: page
+          schema: { type: integer, minimum: 1, default: 1 }
+        - in: query
+          name: per_page
+          schema: { type: integer, minimum: 1, maximum: 100, default: 10 }
+        - in: query
+          name: status
+          schema: { type: string, enum: [active, archived] }
+      responses:
+        "200":
+          description: Notes retrieved
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/NotePage"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+    post:
+      tags: [Notes]
+      summary: Create a personal note
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/NoteCreateRequest"
+      responses:
+        "201":
+          description: Note created
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/Note"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+  /api/notes/{note_id}:
+    parameters:
+      - in: path
+        name: note_id
+        required: true
+        schema: { type: integer }
+    get:
+      tags: [Notes]
+      summary: Get a single personal note
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Note retrieved
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/Note"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    patch:
+      tags: [Notes]
+      summary: Update a personal note
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/NoteUpdateRequest"
+      responses:
+        "200":
+          description: Note updated
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/Note"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    delete:
+      tags: [Notes]
+      summary: Delete a personal note
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Note deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /api/v1/workspaces:
+    get:
+      tags: [Workspaces]
+      summary: List the authenticated user's workspaces
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Workspaces retrieved
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          items:
+                            type: array
+                            items: { $ref: "#/components/schemas/Workspace" }
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+    post:
+      tags: [Workspaces]
+      summary: Create a workspace
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WorkspaceCreateRequest"
+      responses:
+        "201":
+          description: Workspace created
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/Workspace"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+  /api/v1/workspaces/{workspace_id}:
+    parameters:
+      - in: path
+        name: workspace_id
+        required: true
+        schema: { type: integer }
+    get:
+      tags: [Workspaces]
+      summary: Get a workspace
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Workspace retrieved
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/Workspace"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    patch:
+      tags: [Workspaces]
+      summary: Update a workspace
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WorkspaceUpdateRequest"
+      responses:
+        "200":
+          description: Workspace updated
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/Workspace"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    delete:
+      tags: [Workspaces]
+      summary: Delete a workspace
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Workspace deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /api/v1/workspaces/{workspace_id}/sources:
+    parameters:
+      - in: path
+        name: workspace_id
+        required: true
+        schema: { type: integer }
+    get:
+      tags: [Sources]
+      summary: List sources in a workspace
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Sources retrieved
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          items:
+                            type: array
+                            items: { $ref: "#/components/schemas/Source" }
+        "404":
+          $ref: "#/components/responses/NotFound"
+    post:
+      tags: [Sources]
+      summary: Queue a URL for ingestion
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SourceCreateRequest"
+      responses:
+        "200":
+          description: Source already exists for this workspace
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          source: { $ref: "#/components/schemas/Source" }
+                          job:
+                            nullable: true
+                            allOf:
+                              - $ref: "#/components/schemas/Job"
+                          duplicate: { type: boolean }
+        "201":
+          description: Source queued for ingestion
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          source: { $ref: "#/components/schemas/Source" }
+                          job: { $ref: "#/components/schemas/Job" }
+        "400":
+          description: Invalid URL or limit exceeded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /api/v1/workspaces/{workspace_id}/sources/{source_id}:
+    parameters:
+      - in: path
+        name: workspace_id
+        required: true
+        schema: { type: integer }
+      - in: path
+        name: source_id
+        required: true
+        schema: { type: integer }
+    get:
+      tags: [Sources]
+      summary: Get a source
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Source retrieved
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/Source"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    delete:
+      tags: [Sources]
+      summary: Delete a source
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Source deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /api/v1/workspaces/{workspace_id}/sources/{source_id}/sync:
+    parameters:
+      - in: path
+        name: workspace_id
+        required: true
+        schema: { type: integer }
+      - in: path
+        name: source_id
+        required: true
+        schema: { type: integer }
+    post:
+      tags: [Sources]
+      summary: Re-queue ingestion for an existing source
+      security:
+        - bearerAuth: []
+      responses:
+        "202":
+          description: Source queued for re-sync
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          source: { $ref: "#/components/schemas/Source" }
+                          job: { $ref: "#/components/schemas/Job" }
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /api/v1/workspaces/{workspace_id}/artifacts:
+    parameters:
+      - in: path
+        name: workspace_id
+        required: true
+        schema: { type: integer }
+    get:
+      tags: [Artifacts]
+      summary: List artifacts in a workspace
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Artifacts retrieved
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          items:
+                            type: array
+                            items: { $ref: "#/components/schemas/Artifact" }
+        "404":
+          $ref: "#/components/responses/NotFound"
+    post:
+      tags: [Artifacts]
+      summary: Queue an artifact for generation
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ArtifactCreateRequest"
+      responses:
+        "201":
+          description: Artifact queued
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          artifact: { $ref: "#/components/schemas/Artifact" }
+                          job: { $ref: "#/components/schemas/Job" }
+        "400":
+          description: Invalid artifact request or out-of-scope source
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /api/v1/workspaces/{workspace_id}/artifacts/{artifact_id}:
+    parameters:
+      - in: path
+        name: workspace_id
+        required: true
+        schema: { type: integer }
+      - in: path
+        name: artifact_id
+        required: true
+        schema: { type: integer }
+    get:
+      tags: [Artifacts]
+      summary: Read an artifact and its content
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Artifact retrieved
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/Artifact"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /api/v1/workspaces/{workspace_id}/notes:
+    parameters:
+      - in: path
+        name: workspace_id
+        required: true
+        schema: { type: integer }
+    get:
+      tags: [WorkspaceNotes]
+      summary: List notebook notes in a workspace
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: include_archived
+          schema: { type: boolean, default: false }
+      responses:
+        "200":
+          description: Notes retrieved
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          items:
+                            type: array
+                            items: { $ref: "#/components/schemas/WorkspaceNote" }
+        "404":
+          $ref: "#/components/responses/NotFound"
+    post:
+      tags: [WorkspaceNotes]
+      summary: Create a notebook note
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WorkspaceNoteCreateRequest"
+      responses:
+        "201":
+          description: Note created
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/WorkspaceNote"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /api/v1/workspaces/{workspace_id}/notes/{note_id}:
+    parameters:
+      - in: path
+        name: workspace_id
+        required: true
+        schema: { type: integer }
+      - in: path
+        name: note_id
+        required: true
+        schema: { type: integer }
+    patch:
+      tags: [WorkspaceNotes]
+      summary: Update or archive a notebook note
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WorkspaceNoteUpdateRequest"
+      responses:
+        "200":
+          description: Note updated
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/WorkspaceNote"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    delete:
+      tags: [WorkspaceNotes]
+      summary: Delete a notebook note
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Note deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /api/v1/workspaces/{workspace_id}/queries:
+    parameters:
+      - in: path
+        name: workspace_id
+        required: true
+        schema: { type: integer }
+    get:
+      tags: [Queries]
+      summary: List the most recent questions (limit 50)
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Queries retrieved
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          items:
+                            type: array
+                            items: { $ref: "#/components/schemas/Query" }
+        "404":
+          $ref: "#/components/responses/NotFound"
+    post:
+      tags: [Queries]
+      summary: Queue a grounded question
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/QueryCreateRequest"
+      responses:
+        "201":
+          description: Question queued
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          query: { $ref: "#/components/schemas/Query" }
+                          job: { $ref: "#/components/schemas/Job" }
+        "400":
+          description: Invalid question or out-of-scope source/note
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /api/v1/workspaces/{workspace_id}/queries/{query_id}:
+    parameters:
+      - in: path
+        name: workspace_id
+        required: true
+        schema: { type: integer }
+      - in: path
+        name: query_id
+        required: true
+        schema: { type: integer }
+    get:
+      tags: [Queries]
+      summary: Read a question, answer, and citations
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Query retrieved
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        allOf:
+                          - $ref: "#/components/schemas/Query"
+                          - type: object
+                            properties:
+                              job:
+                                nullable: true
+                                allOf:
+                                  - $ref: "#/components/schemas/Job"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /api/v1/jobs/{job_id}:
+    parameters:
+      - in: path
+        name: job_id
+        required: true
+        schema: { type: integer }
+    get:
+      tags: [Jobs]
+      summary: Poll job status
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Job retrieved
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/Job"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /api/v1/jobs/{job_id}/run:
+    parameters:
+      - in: path
+        name: job_id
+        required: true
+        schema: { type: integer }
+    post:
+      tags: [Jobs]
+      summary: Local-only execution hook
+      description: |
+        Advances a single queued job in development. In production this
+        endpoint should be disabled and a separate worker should process
+        jobs.
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Job executed (or already terminal)
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/Job"
+        "404":
+          $ref: "#/components/responses/NotFound"
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  responses:
+    ValidationError:
+      description: Validation failed
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorEnvelope"
+    Unauthorized:
+      description: Missing or invalid token
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorEnvelope"
+    NotFound:
+      description: Resource not found (or not owned by the caller)
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorEnvelope"
+  schemas:
+    SuccessEnvelope:
+      type: object
+      required: [success, message]
+      properties:
+        success: { type: boolean, enum: [true] }
+        message: { type: string }
+        data: {}
+    MessageResponse:
+      allOf:
+        - $ref: "#/components/schemas/SuccessEnvelope"
+        - type: object
+          properties:
+            data: { nullable: true }
+    ErrorEnvelope:
+      type: object
+      required: [success, error]
+      properties:
+        success: { type: boolean, enum: [false] }
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code:
+              type: string
+              description: |
+                Stable machine-readable error code. Known codes include
+                `VALIDATION_ERROR`, `DUPLICATE_USERNAME`, `DUPLICATE_EMAIL`,
+                `INVALID_CREDENTIALS`, `INVALID_GOOGLE_TOKEN`, `NOT_FOUND`,
+                `INVALID_URL`, `INVALID_SOURCE_SCOPE`, `INVALID_NOTE_SCOPE`,
+                `LIMIT_EXCEEDED`, `LOGOUT_ERROR`, `SIGNUP_ERROR`,
+                `CREATE_ERROR`, `LIST_ERROR`, `UPDATE_ERROR`, `DELETE_ERROR`,
+                `INVALID_STATUS`.
+            message: { type: string }
+            details: {}
+    User:
+      type: object
+      required: [id, username, email, created_at, updated_at]
+      properties:
+        id: { type: integer }
+        username: { type: string }
+        email: { type: string, format: email }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+    SignupRequest:
+      type: object
+      required: [username, email, password]
+      properties:
+        username: { type: string, minLength: 3, maxLength: 80 }
+        email: { type: string, format: email }
+        password: { type: string, minLength: 8 }
+    LoginRequest:
+      type: object
+      required: [password]
+      properties:
+        username: { type: string, maxLength: 80 }
+        email: { type: string, format: email }
+        password: { type: string }
+    AuthResponse:
+      allOf:
+        - $ref: "#/components/schemas/SuccessEnvelope"
+        - type: object
+          properties:
+            data:
+              type: object
+              required: [user, token]
+              properties:
+                user: { $ref: "#/components/schemas/User" }
+                token: { type: string, description: JWT }
+    Note:
+      type: object
+      required: [id, user_id, title, content, status, created_at, updated_at]
+      properties:
+        id: { type: integer }
+        user_id: { type: integer }
+        title: { type: string, maxLength: 255 }
+        content: { type: string }
+        status: { type: string, enum: [active, archived] }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+    NoteCreateRequest:
+      type: object
+      required: [title, content]
+      properties:
+        title: { type: string, minLength: 1, maxLength: 255 }
+        content: { type: string, minLength: 1 }
+        status: { type: string, enum: [active, archived], default: active }
+    NoteUpdateRequest:
+      type: object
+      properties:
+        title: { type: string, minLength: 1, maxLength: 255 }
+        content: { type: string, minLength: 1 }
+        status: { type: string, enum: [active, archived] }
+    NotePage:
+      type: object
+      required: [items, total, pages, current_page, per_page]
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/Note" }
+        total: { type: integer }
+        pages: { type: integer }
+        current_page: { type: integer }
+        per_page: { type: integer }
+    Workspace:
+      type: object
+      required: [id, user_id, name, description, created_at, updated_at]
+      properties:
+        id: { type: integer }
+        user_id: { type: integer }
+        name: { type: string, maxLength: 120 }
+        description: { type: string, maxLength: 2000 }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+    WorkspaceCreateRequest:
+      type: object
+      required: [name]
+      properties:
+        name: { type: string, minLength: 1, maxLength: 120 }
+        description: { type: string, maxLength: 2000, default: "" }
+    WorkspaceUpdateRequest:
+      type: object
+      properties:
+        name: { type: string, minLength: 1, maxLength: 120 }
+        description: { type: string, maxLength: 2000 }
+    Source:
+      type: object
+      required:
+        - id
+        - workspace_id
+        - url
+        - title
+        - source_type
+        - status
+        - content_hash
+        - error_message
+        - created_at
+        - updated_at
+      properties:
+        id: { type: integer }
+        workspace_id: { type: integer }
+        url: { type: string, format: uri, maxLength: 2048 }
+        title: { type: string, maxLength: 512 }
+        source_type: { type: string, example: web }
+        status:
+          type: string
+          enum: [pending, queued, processing, ready, failed]
+        content_hash: { type: string }
+        error_message: { type: string }
+        last_synced_at:
+          type: string
+          format: date-time
+          nullable: true
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+    SourceCreateRequest:
+      type: object
+      required: [url]
+      properties:
+        url: { type: string, format: uri, maxLength: 2048, description: Public http(s) URL only. }
+        title: { type: string, maxLength: 512, default: "" }
+    Artifact:
+      type: object
+      required:
+        - id
+        - workspace_id
+        - artifact_type
+        - title
+        - status
+        - instructions
+        - content
+        - error_message
+        - schema_version
+        - sources
+        - created_at
+        - updated_at
+      properties:
+        id: { type: integer }
+        workspace_id: { type: integer }
+        artifact_type:
+          type: string
+          enum: [slides, mindmap, table, quiz, summary]
+        title: { type: string, maxLength: 255 }
+        status:
+          type: string
+          enum: [queued, running, succeeded, failed]
+        instructions: { type: string, maxLength: 2000 }
+        content: { type: string, description: Structured artifact JSON or text. }
+        error_message: { type: string }
+        schema_version: { type: string, example: "1.0" }
+        sources:
+          type: array
+          description: Source IDs used as evidence.
+          items: { type: integer }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+    ArtifactCreateRequest:
+      type: object
+      required: [artifact_type, title]
+      properties:
+        artifact_type:
+          type: string
+          enum: [slides, mindmap, table, quiz, summary]
+        title: { type: string, minLength: 1, maxLength: 255 }
+        instructions: { type: string, maxLength: 2000, default: "" }
+        source_ids:
+          type: array
+          maxItems: 50
+          items: { type: integer }
+          description: Optional subset of workspace source IDs to ground the artifact.
+    WorkspaceNote:
+      type: object
+      required: [id, workspace_id, title, content, status, created_at, updated_at]
+      properties:
+        id: { type: integer }
+        workspace_id: { type: integer }
+        title: { type: string, maxLength: 255 }
+        content: { type: string, maxLength: 50000 }
+        status: { type: string, enum: [active, archived] }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+    WorkspaceNoteCreateRequest:
+      type: object
+      required: [title]
+      properties:
+        title: { type: string, minLength: 1, maxLength: 255 }
+        content: { type: string, maxLength: 50000, default: "" }
+        status: { type: string, enum: [active, archived], default: active }
+    WorkspaceNoteUpdateRequest:
+      type: object
+      properties:
+        title: { type: string, minLength: 1, maxLength: 255 }
+        content: { type: string, maxLength: 50000 }
+        status: { type: string, enum: [active, archived] }
+    Query:
+      type: object
+      required:
+        - id
+        - workspace_id
+        - question
+        - answer
+        - status
+        - citations
+        - source_ids
+        - note_ids
+        - error_message
+        - created_at
+        - updated_at
+      properties:
+        id: { type: integer }
+        workspace_id: { type: integer }
+        job_id: { type: integer, nullable: true }
+        question: { type: string }
+        answer: { type: string }
+        status: { type: string, enum: [queued, running, succeeded, failed] }
+        citations:
+          type: array
+          description: Evidence items selected for the answer.
+          items:
+            type: object
+            additionalProperties: true
+        source_ids: { type: array, items: { type: integer } }
+        note_ids: { type: array, items: { type: integer } }
+        error_message: { type: string }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+    QueryCreateRequest:
+      type: object
+      required: [question]
+      properties:
+        question: { type: string, minLength: 1, maxLength: 2000 }
+        source_ids:
+          type: array
+          maxItems: 50
+          items: { type: integer }
+        note_ids:
+          type: array
+          maxItems: 50
+          items: { type: integer }
+    Job:
+      type: object
+      required:
+        - id
+        - workspace_id
+        - job_type
+        - status
+        - attempts
+        - max_attempts
+        - error_message
+        - created_at
+        - updated_at
+      properties:
+        id: { type: integer }
+        workspace_id: { type: integer }
+        artifact_id: { type: integer, nullable: true }
+        job_type:
+          type: string
+          enum: [source_ingestion, artifact_generation, question_answering]
+        status:
+          type: string
+          enum: [queued, running, succeeded, failed]
+        attempts: { type: integer }
+        max_attempts: { type: integer }
+        error_message: { type: string }
+        started_at: { type: string, format: date-time, nullable: true }
+        finished_at: { type: string, format: date-time, nullable: true }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }

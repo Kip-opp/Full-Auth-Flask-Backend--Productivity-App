@@ -1,0 +1,21 @@
+meta {
+{'type': 'http', 'name': 'Register a new user', 'seq': 0}
+}
+
+vars {
+{'token': '{{token}}'}
+}
+
+{{
+  method: POST
+  url: {{base_url}}/api/auth/signup
+  body: json
+}
+
+body:json {
+  {
+    "username": "alice",
+    "email": "alice@example.com",
+    "password": "password123"
+  }
+}

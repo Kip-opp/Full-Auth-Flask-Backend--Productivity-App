@@ -1,0 +1,17 @@
+meta {
+{'type': 'http', 'name': 'Re-queue ingestion for an existing source', 'seq': 0}
+}
+
+vars {
+{'token': '{{token}}'}
+}
+
+auth {
+{'bearer': {'token': '{{token}}'}}
+}
+
+{{
+  method: POST
+  url: {{base_url}}/api/v1/workspaces/{{workspace_id}}/sources/{{source_id}}/sync
+}
+

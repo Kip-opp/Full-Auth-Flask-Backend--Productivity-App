@@ -1,0 +1,13 @@
+meta {
+{'type': 'http', 'name': 'Google sign-in availability', 'seq': 0}
+}
+
+vars {
+{'token': '{{token}}'}
+}
+
+{{
+  method: GET
+  url: {{base_url}}/api/auth/google/config
+}}
+

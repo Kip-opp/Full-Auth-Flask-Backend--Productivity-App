@@ -1,0 +1,17 @@
+meta {
+{'type': 'http', 'name': 'Local-only execution hook', 'seq': 0}
+}
+
+vars {
+{'token': '{{token}}'}
+}
+
+auth {
+{'bearer': {'token': '{{token}}'}}
+}
+
+{{
+  method: POST
+  url: {{base_url}}/api/v1/jobs/{{job_id}}/run
+}
+

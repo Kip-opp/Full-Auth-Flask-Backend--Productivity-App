@@ -1,0 +1,17 @@
+meta {
+{'type': 'http', 'name': 'Revoke the current JWT', 'seq': 0}
+}
+
+vars {
+{'token': '{{token}}'}
+}
+
+auth {
+{'bearer': {'token': '{{token}}'}}
+}
+
+{{
+  method: POST
+  url: {{base_url}}/api/auth/logout
+}
+

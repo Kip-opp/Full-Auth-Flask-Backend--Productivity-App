@@ -1,0 +1,20 @@
+meta {
+{'type': 'http', 'name': 'Authenticate with a Google id_token or access_token', 'seq': 0}
+}
+
+vars {
+{'token': '{{token}}'}
+}
+
+{{
+  method: POST
+  url: {{base_url}}/api/auth/google
+  body: json
+}
+
+body:json {
+  {
+    "id_token": "example id_token",
+    "access_token": "example access_token"
+  }
+}

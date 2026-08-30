@@ -1,0 +1,25 @@
+meta {
+{'type': 'http', 'name': 'Create a personal note', 'seq': 0}
+}
+
+vars {
+{'token': '{{token}}'}
+}
+
+auth {
+{'bearer': {'token': '{{token}}'}}
+}
+
+{{
+  method: POST
+  url: {{base_url}}/api/notes
+  body: json
+}
+
+body:json {
+  {
+    "title": "My note",
+    "content": "Note content",
+    "status": "active"
+  }
+}

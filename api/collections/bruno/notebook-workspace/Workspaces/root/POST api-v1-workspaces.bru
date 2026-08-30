@@ -1,0 +1,24 @@
+meta {
+{'type': 'http', 'name': 'Create a workspace', 'seq': 0}
+}
+
+vars {
+{'token': '{{token}}'}
+}
+
+auth {
+{'bearer': {'token': '{{token}}'}}
+}
+
+{{
+  method: POST
+  url: {{base_url}}/api/v1/workspaces
+  body: json
+}
+
+body:json {
+  {
+    "name": "API development notebook",
+    "description": "Backend-only smoke test"
+  }
+}

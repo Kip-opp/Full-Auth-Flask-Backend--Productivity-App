@@ -1,0 +1,23 @@
+meta {
+{'type': 'http', 'name': 'Update or archive a notebook note', 'seq': 0}
+}
+
+vars {
+{'token': '{{token}}'}
+}
+
+auth {
+{'bearer': {'token': '{{token}}'}}
+}
+
+{{
+  method: PATCH
+  url: {{base_url}}/api/v1/workspaces/{{workspace_id}}/notes/{{note_id}}
+  body: json
+}
+
+body:json {
+  {
+    "status": "archived"
+  }
+}

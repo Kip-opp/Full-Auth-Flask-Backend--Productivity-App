@@ -1,0 +1,23 @@
+meta {
+{'type': 'http', 'name': 'Update a personal note', 'seq': 0}
+}
+
+vars {
+{'token': '{{token}}'}
+}
+
+auth {
+{'bearer': {'token': '{{token}}'}}
+}
+
+{{
+  method: PATCH
+  url: {{base_url}}/api/notes/{{note_id}}
+  body: json
+}
+
+body:json {
+  {
+    "status": "archived"
+  }
+}

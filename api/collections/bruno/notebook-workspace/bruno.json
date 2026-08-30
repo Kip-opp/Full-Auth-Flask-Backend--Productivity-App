@@ -1,0 +1,9 @@
+{
+  "version": "1",
+  "name": "Notebook Workspace",
+  "type": "collection",
+  "ignore": [
+    "node_modules",
+    ".git"
+  ]
+}

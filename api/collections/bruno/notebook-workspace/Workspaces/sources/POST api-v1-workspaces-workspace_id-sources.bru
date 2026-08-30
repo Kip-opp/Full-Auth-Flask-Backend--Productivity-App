@@ -1,0 +1,24 @@
+meta {
+{'type': 'http', 'name': 'Queue a URL for ingestion', 'seq': 0}
+}
+
+vars {
+{'token': '{{token}}'}
+}
+
+auth {
+{'bearer': {'token': '{{token}}'}}
+}
+
+{{
+  method: POST
+  url: {{base_url}}/api/v1/workspaces/{{workspace_id}}/sources
+  body: json
+}
+
+body:json {
+  {
+    "url": "https://example.com/article",
+    "title": "Example article"
+  }
+}

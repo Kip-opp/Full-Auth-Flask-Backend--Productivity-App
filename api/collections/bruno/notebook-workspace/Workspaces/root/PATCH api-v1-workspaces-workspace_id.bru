@@ -1,0 +1,23 @@
+meta {
+{'type': 'http', 'name': 'Update a workspace', 'seq': 0}
+}
+
+vars {
+{'token': '{{token}}'}
+}
+
+auth {
+{'bearer': {'token': '{{token}}'}}
+}
+
+{{
+  method: PATCH
+  url: {{base_url}}/api/v1/workspaces/{{workspace_id}}
+  body: json
+}
+
+body:json {
+  {
+    "name": "Renamed notebook"
+  }
+}

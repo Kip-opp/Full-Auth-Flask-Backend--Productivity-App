@@ -1,0 +1,25 @@
+meta {
+{'type': 'http', 'name': 'Queue a grounded question', 'seq': 0}
+}
+
+vars {
+{'token': '{{token}}'}
+}
+
+auth {
+{'bearer': {'token': '{{token}}'}}
+}
+
+{{
+  method: POST
+  url: {{base_url}}/api/v1/workspaces/{{workspace_id}}/queries
+  body: json
+}
+
+body:json {
+  {
+    "question": "Why should ingestion and AI generation use durable jobs?",
+    "source_ids": [],
+    "note_ids": []
+  }
+}

@@ -1,0 +1,17 @@
+meta {
+{'type': 'http', 'name': 'Get a workspace', 'seq': 0}
+}
+
+vars {
+{'token': '{{token}}'}
+}
+
+auth {
+{'bearer': {'token': '{{token}}'}}
+}
+
+{{
+  method: GET
+  url: {{base_url}}/api/v1/workspaces/{{workspace_id}}
+}}
+

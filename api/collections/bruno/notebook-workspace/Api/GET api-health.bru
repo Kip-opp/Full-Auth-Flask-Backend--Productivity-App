@@ -1,0 +1,13 @@
+meta {
+{'type': 'http', 'name': 'Liveness probe', 'seq': 0}
+}
+
+vars {
+{'token': '{{token}}'}
+}
+
+{{
+  method: GET
+  url: {{base_url}}/api/health
+}}
+

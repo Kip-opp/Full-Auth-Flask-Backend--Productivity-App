@@ -1,0 +1,26 @@
+meta {
+{'type': 'http', 'name': 'Queue an artifact for generation', 'seq': 0}
+}
+
+vars {
+{'token': '{{token}}'}
+}
+
+auth {
+{'bearer': {'token': '{{token}}'}}
+}
+
+{{
+  method: POST
+  url: {{base_url}}/api/v1/workspaces/{{workspace_id}}/artifacts
+  body: json
+}
+
+body:json {
+  {
+    "artifact_type": "summary",
+    "title": "Workspace summary",
+    "instructions": "Summarize the workspace sources",
+    "source_ids": []
+  }
+}

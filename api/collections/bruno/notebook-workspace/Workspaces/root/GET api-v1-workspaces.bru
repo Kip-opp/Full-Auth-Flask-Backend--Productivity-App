@@ -1,0 +1,17 @@
+meta {
+{'type': 'http', 'name': "List the authenticated user's workspaces", 'seq': 0}
+}
+
+vars {
+{'token': '{{token}}'}
+}
+
+auth {
+{'bearer': {'token': '{{token}}'}}
+}
+
+{{
+  method: GET
+  url: {{base_url}}/api/v1/workspaces
+}}
+
