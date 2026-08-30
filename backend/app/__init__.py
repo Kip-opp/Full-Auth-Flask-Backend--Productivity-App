@@ -26,15 +26,30 @@ def create_app(config=None):
         }
     })
 
-    from app.routes import auth_bp, notes_bp
+    from app.routes import (
+        auth_bp,
+        notes_bp,
+        workspaces_bp,
+        sources_bp,
+        artifacts_bp,
+        jobs_bp,
+        workspace_notes_bp,
+        queries_bp,
+    )
     app.register_blueprint(auth_bp)
     app.register_blueprint(notes_bp)
+    app.register_blueprint(workspaces_bp)
+    app.register_blueprint(sources_bp)
+    app.register_blueprint(artifacts_bp)
+    app.register_blueprint(jobs_bp)
+    app.register_blueprint(workspace_notes_bp)
+    app.register_blueprint(queries_bp)
+
+    from app.cli import register_cli
+    register_cli(app)
 
     @app.route('/api/health', methods=['GET'])
     def health():
         return {'status': 'ok'}, 200
-
-    with app.app_context():
-        db.create_all()
 
     return app

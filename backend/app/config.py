@@ -26,6 +26,18 @@ class Config:
     
     CORS_ORIGINS = os.getenv('CORS_ORIGINS', 'http://localhost:3000,http://localhost:5500,http://localhost:5173,http://localhost:8000,http://127.0.0.1:5500').split(',')
 
+    # Optional Google OAuth credentials. When GOOGLE_CLIENT_ID is unset the
+    # /api/auth/google/* endpoints are disabled and the client UI hides the
+    # "Continue with Google" button. Credentials must come from environment
+    # variables or a secret manager; they are never written to source.
+    GOOGLE_CLIENT_ID = os.getenv('GOOGLE_CLIENT_ID', '').strip() or None
+    GOOGLE_CLIENT_SECRET = os.getenv('GOOGLE_CLIENT_SECRET', '').strip() or None
+    GOOGLE_ALLOWED_EMAILS = {
+        email.strip().lower()
+        for email in os.getenv('GOOGLE_ALLOWED_EMAILS', '').split(',')
+        if email.strip()
+    } or None
+
 
 class DevelopmentConfig(Config):
     """Development configuration."""
