@@ -3,10 +3,12 @@
  * Handles all HTTP requests to the backend
  */
 
-// Change this to your production backend URL when deploying
-const API_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' 
-    ? 'http://localhost:5000/api' 
-    : 'https://your-production-api-url.com/api';
+// On Vercel the API is served from the same origin under /api, so
+// `${window.location.origin}/api` is used in production. Locally the
+// backend runs on http://localhost:5000.
+const API_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+    ? 'http://localhost:5000/api'
+    : `${window.location.origin}/api`;
 
 class APIService {
     constructor() {
