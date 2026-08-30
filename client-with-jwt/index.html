@@ -1,25 +1,28 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="light">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Notes App</title>
+    <meta name="description" content="Notebook — a source-grounded workspace for thinking.">
+    <title>Notebook</title>
+    <link rel="preconnect" href="https://accounts.google.com">
+    <link rel="stylesheet" href="css/tokens.css">
     <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/auth.css">
+    <link rel="stylesheet" href="css/workspace.css">
     <link rel="stylesheet" href="css/responsive.css">
 </head>
 <body>
     <div id="app">
-        <div id="auth-container" style="display: none;">
-            <!-- Auth pages will be loaded here -->
-        </div>
-        <div id="dashboard-container" style="display: none;">
-            <!-- Dashboard pages will be loaded here -->
-        </div>
+        <div id="auth-container" style="display: none;"></div>
+        <div id="dashboard-container" style="display: none;"></div>
     </div>
 
+    <script src="js/theme.js"></script>
     <script src="js/api.js"></script>
     <script src="js/auth.js"></script>
     <script src="js/notes.js"></script>
+    <script src="js/workspace.js"></script>
     <script src="js/main.js"></script>
 </body>
 </html>
