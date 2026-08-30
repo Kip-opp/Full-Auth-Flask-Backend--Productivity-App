@@ -72,6 +72,17 @@ class APIService {
         });
     }
 
+    async loginWithGoogle(idToken) {
+        return this.request('/auth/google', {
+            method: 'POST',
+            body: JSON.stringify({ id_token: idToken }),
+        });
+    }
+
+    async googleConfig() {
+        return this.request('/auth/google/config', { method: 'GET' });
+    }
+
     async logout() {
         return this.request('/auth/logout', {
             method: 'POST',
@@ -123,6 +134,128 @@ class APIService {
     async deleteNote(id) {
         return this.request(`/notes/${id}`, {
             method: 'DELETE',
+        });
+    }
+
+    // V1 workspace endpoints ----------------------------------------------------
+
+    _v1(path, options) {
+        return this.request(`/v1${path}`, options);
+    }
+
+    async listWorkspaces() {
+        return this._v1('/workspaces', { method: 'GET' });
+    }
+
+    async createWorkspace(name, description = '') {
+        return this._v1('/workspaces', {
+            method: 'POST',
+            body: JSON.stringify({ name, description }),
+        });
+    }
+
+    async getWorkspace(id) {
+        return this._v1(`/workspaces/${id}`, { method: 'GET' });
+    }
+
+    async updateWorkspace(id, data) {
+        return this._v1(`/workspaces/${id}`, {
+            method: 'PATCH',
+            body: JSON.stringify(data),
+        });
+    }
+
+    async deleteWorkspace(id) {
+        return this._v1(`/workspaces/${id}`, { method: 'DELETE' });
+    }
+
+    async listSources(workspaceId) {
+        return this._v1(`/workspaces/${workspaceId}/sources`, { method: 'GET' });
+    }
+
+    async createSource(workspaceId, url, title = '') {
+        return this._v1(`/workspaces/${workspaceId}/sources`, {
+            method: 'POST',
+            body: JSON.stringify({ url, title }),
+        });
+    }
+
+    async deleteSource(workspaceId, sourceId) {
+        return this._v1(`/workspaces/${workspaceId}/sources/${sourceId}`, {
+            method: 'DELETE',
+        });
+    }
+
+    async resyncSource(workspaceId, sourceId) {
+        return this._v1(`/workspaces/${workspaceId}/sources/${sourceId}/sync`, {
+            method: 'POST',
+        });
+    }
+
+    async listArtifacts(workspaceId) {
+        return this._v1(`/workspaces/${workspaceId}/artifacts`, { method: 'GET' });
+    }
+
+    async createArtifact(workspaceId, payload) {
+        return this._v1(`/workspaces/${workspaceId}/artifacts`, {
+            method: 'POST',
+            body: JSON.stringify(payload),
+        });
+    }
+
+    async getArtifact(workspaceId, artifactId) {
+        return this._v1(`/workspaces/${workspaceId}/artifacts/${artifactId}`, {
+            method: 'GET',
+        });
+    }
+
+    async getJob(jobId) {
+        return this._v1(`/jobs/${jobId}`, { method: 'GET' });
+    }
+
+    async runJob(jobId) {
+        return this._v1(`/jobs/${jobId}/run`, { method: 'POST' });
+    }
+
+    async listNotes(workspaceId, includeArchived = false) {
+        const qs = includeArchived ? '?include_archived=true' : '';
+        return this._v1(`/workspaces/${workspaceId}/notes${qs}`, { method: 'GET' });
+    }
+
+    async createNote(workspaceId, title, content) {
+        return this._v1(`/workspaces/${workspaceId}/notes`, {
+            method: 'POST',
+            body: JSON.stringify({ title, content, status: 'active' }),
+        });
+    }
+
+    async updateNote(workspaceId, noteId, data) {
+        return this._v1(`/workspaces/${workspaceId}/notes/${noteId}`, {
+            method: 'PATCH',
+            body: JSON.stringify(data),
+        });
+    }
+
+    async deleteNote(workspaceId, noteId) {
+        return this._v1(`/workspaces/${workspaceId}/notes/${noteId}`, {
+            method: 'DELETE',
+        });
+    }
+
+    async listQueries(workspaceId) {
+        return this._v1(`/workspaces/${workspaceId}/queries`, { method: 'GET' });
+    }
+
+    async createQuery(workspaceId, payload) {
+        return this._v1(`/workspaces/${workspaceId}/queries`, {
+            method: 'POST',
+            body: JSON.stringify(payload),
+        });
+    }
+
+    async getQuery(workspaceId, queryId) {
+        return this._v1(`/workspaces/${workspaceId}/queries/${queryId}`, {
+            method: 'GET',
         });
     }
 }
