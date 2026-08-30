@@ -1,0 +1,121 @@
+/*
+ * Design tokens.
+ *
+ * The application palette is intentionally tight: off-white canvas, deep
+ * black ink, and a teal-blue accent. All other colours are derived from
+ * these via lightness adjustments. Tokens are also exposed as
+ * `[data-theme="dark"]` overrides so the dark-mode toggle is a single
+ * attribute change on <html>.
+ */
+
+:root,
+[data-theme="light"] {
+    /* Palette */
+    --color-canvas: #f7f5f0;          /* off-white canvas */
+    --color-canvas-elevated: #ffffff; /* cards, inputs, topbar */
+    --color-ink: #0c0f14;             /* near-black primary text */
+    --color-ink-muted: #4b5563;       /* secondary text */
+    --color-ink-subtle: #6b7280;      /* tertiary text */
+    --color-border: #e3e1da;          /* hairline border */
+    --color-border-strong: #cdc9bf;   /* visible border */
+    --color-accent: #0f6b7a;          /* teal-blue accent */
+    --color-accent-hover: #0b5562;    /* deeper teal for hover */
+    --color-accent-soft: #e2eff1;     /* accent tint for backgrounds */
+    --color-accent-ink: #ffffff;      /* text on accent */
+    --color-danger: #b3261e;
+    --color-success: #1f7a4d;
+    --color-warning: #8a5a00;
+
+    /* Surfaces */
+    --color-sidebar: #0c0f14;
+    --color-sidebar-ink: #e5e7ef;
+    --color-sidebar-muted: #9aa1b2;
+    --color-sidebar-border: #1d212d;
+
+    /* Effects */
+    --shadow-sm: 0 1px 0 rgba(12, 15, 20, 0.04);
+    --shadow-md: 0 8px 24px rgba(12, 15, 20, 0.06);
+    --shadow-lg: 0 20px 48px rgba(12, 15, 20, 0.10);
+
+    /* Typography */
+    --font-sans: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI",
+        Roboto, Oxygen, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
+    --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas,
+        "Liberation Mono", monospace;
+
+    /* Geometry */
+    --radius-sm: 6px;
+    --radius-md: 10px;
+    --radius-lg: 16px;
+    --space-1: 4px;
+    --space-2: 8px;
+    --space-3: 12px;
+    --space-4: 16px;
+    --space-5: 24px;
+    --space-6: 32px;
+    --space-7: 48px;
+    --space-8: 64px;
+
+    --transition-fast: 120ms ease;
+    --transition-base: 200ms ease;
+}
+
+[data-theme="dark"] {
+    --color-canvas: #0a0d12;
+    --color-canvas-elevated: #11141b;
+    --color-ink: #e9edf3;
+    --color-ink-muted: #b3b9c7;
+    --color-ink-subtle: #8a92a3;
+    --color-border: #1d2230;
+    --color-border-strong: #2a3142;
+    --color-accent: #4dd0d6;
+    --color-accent-hover: #79dde2;
+    --color-accent-soft: #143036;
+    --color-accent-ink: #0a0d12;
+    --color-danger: #f87171;
+    --color-success: #4ade80;
+    --color-warning: #fbbf24;
+
+    --color-sidebar: #07090d;
+    --color-sidebar-ink: #e9edf3;
+    --color-sidebar-muted: #8a92a3;
+    --color-sidebar-border: #15181f;
+
+    --shadow-sm: 0 1px 0 rgba(0, 0, 0, 0.4);
+    --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.5);
+    --shadow-lg: 0 20px 48px rgba(0, 0, 0, 0.6);
+}
+
+@media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+        --color-canvas: #0a0d12;
+        --color-canvas-elevated: #11141b;
+        --color-ink: #e9edf3;
+        --color-ink-muted: #b3b9c7;
+        --color-ink-subtle: #8a92a3;
+        --color-border: #1d2230;
+        --color-border-strong: #2a3142;
+        --color-accent: #4dd0d6;
+        --color-accent-hover: #79dde2;
+        --color-accent-soft: #143036;
+        --color-accent-ink: #0a0d12;
+        --color-danger: #f87171;
+        --color-success: #4ade80;
+        --color-warning: #fbbf24;
+        --color-sidebar: #07090d;
+        --color-sidebar-ink: #e9edf3;
+        --color-sidebar-muted: #8a92a3;
+        --color-sidebar-border: #15181f;
+    }
+}
+
+html, body {
+    background: var(--color-canvas);
+    color: var(--color-ink);
+    transition: background-color var(--transition-base),
+        color var(--transition-base);
+}
+
+body {
+    font-family: var(--font-sans);
+}
