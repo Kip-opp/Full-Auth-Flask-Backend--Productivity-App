@@ -1,10 +1,21 @@
 # Full-Stack Notes Application
 
+## Notebook workspace
+
+This repository now ships a **source-grounded notebook workspace**
+alongside the original notes application. Users create workspaces,
+import HTTP(S) sources, write notebook notes, generate slides, mind
+maps, data tables, quizzes, and summaries, and ask the notebook
+questions grounded in their own evidence. The legacy `/api/auth/*` and
+`/api/notes/*` contracts are preserved; the new endpoints are versioned
+under `/api/v1/*` and described in [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)
+and [`backend/README.md`](backend/README.md).
+
 ## Project Overview
 
-This is a comprehensive full-stack productivity notes application that allows users to create, manage, and organize their personal notes securely. The application features a robust backend built with Flask and SQLAlchemy, providing RESTful APIs for authentication and note management. The frontend is a responsive single-page application built with vanilla JavaScript, offering an intuitive user interface for note creation, editing, and organization.
+This is a comprehensive full-stack productivity application that allows users to create, manage, and organize their personal notes and notebook workspaces securely. The application features a robust backend built with Flask and SQLAlchemy, providing RESTful APIs for authentication, note management, and workspace operations. The frontend is a responsive single-page application built with vanilla JavaScript, offering an intuitive user interface for note creation, editing, source ingestion, artifact generation, and grounded question answering.
 
-The application implements JWT-based authentication to ensure secure user sessions and data privacy. Each user can create multiple notes with titles, content, and status management (active/archived). The system includes pagination for efficient data retrieval and filtering capabilities to help users organize their notes effectively.
+The application implements JWT-based authentication to ensure secure user sessions and data privacy. Each user can create multiple workspaces, each containing its own sources, notes, and artifacts. The system includes durable jobs for source ingestion and artifact generation, content-hash based idempotency, and explicit ownership checks on every record.
 
 ## Key Features
 
