@@ -122,7 +122,51 @@ class TestMe:
             '/api/auth/me',
             headers={'Authorization': f'Bearer {token}'}
         )
-        
+
         assert response.status_code == 200
         data = json.loads(response.data)
         assert data['data']['username'] == 'testuser'
+
+
+class TestGoogleOAuth:
+    """Google sign-in is env-gated; verify the route is absent by default."""
+
+    def test_google_config_hidden_when_unset(self, client):
+        response = client.get('/api/auth/google/config')
+        assert response.status_code == 404
+
+    def test_google_login_rejected_when_unset(self, client):
+        response = client.post('/api/auth/google', json={'id_token': 'x'})
+        assert response.status_code == 404
+
+    def test_google_config_exposed_when_configured(self, app, client):
+        app.config['GOOGLE_CLIENT_ID'] = 'demo-client-id.apps.googleusercontent.com'
+        response = client.get('/api/auth/google/config')
+        assert response.status_code == 200
+        data = json.loads(response.data)['data']
+        assert data['enabled'] is True
+        assert data['client_id'] == 'demo-client-id.apps.googleusercontent.com'
+
+    def test_google_login_provisions_user(self, app, client, monkeypatch):
+        from app.services import google_oauth
+        from app.models.user import User
+
+        app.config['GOOGLE_CLIENT_ID'] = 'demo-client-id.apps.googleusercontent.com'
+
+        class _Identity:
+            google_sub = 'sub-1'
+            email = 'jane@example.com'
+            email_verified = True
+            name = 'Jane Doe'
+
+        monkeypatch.setattr(google_oauth, 'verify',
+                            lambda id_token, access_token: _Identity())
+
+        response = client.post('/api/auth/google', json={'id_token': 'abc'})
+        assert response.status_code == 200
+        body = json.loads(response.data)
+        assert 'token' in body['data']
+        with app.app_context():
+            user = User.query.filter_by(email='jane@example.com').first()
+            assert user is not None
+            assert user.username == 'jane'

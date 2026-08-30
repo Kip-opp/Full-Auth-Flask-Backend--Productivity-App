@@ -28,24 +28,30 @@ def client(app):
 
 @pytest.fixture
 def users(app):
-    """Create demo users."""
+    """Create demo users and return mapping of username to user id."""
     with app.app_context():
         alice = User(username='alice', email='alice@example.com')
         alice.set_password('password123')
-        
+
         bob = User(username='bob', email='bob@example.com')
         bob.set_password('password123')
-        
+
         db.session.add(alice)
         db.session.add(bob)
         db.session.commit()
-        
-        return {'alice': alice, 'bob': bob}
+
+        return {'alice_id': alice.id, 'bob_id': bob.id}
 
 
 @pytest.fixture
-def alice_token(client):
-    """Get token for alice."""
+def alice_token(client, app):
+    """Get token for alice, creating the user if needed."""
+    with app.app_context():
+        if not User.query.filter_by(username='alice').first():
+            alice = User(username='alice', email='alice@example.com')
+            alice.set_password('password123')
+            db.session.add(alice)
+            db.session.commit()
     response = client.post('/api/auth/login', json={
         'username': 'alice',
         'password': 'password123'
@@ -95,7 +101,7 @@ class TestDeleteNote:
         """Test successful note deletion."""
         with app.app_context():
             note = Note(
-                user_id=users['alice'].id,
+                user_id=users['alice_id'],
                 title='To Delete',
                 content='Content'
             )
