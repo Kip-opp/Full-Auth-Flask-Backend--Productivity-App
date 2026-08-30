@@ -31,7 +31,18 @@ class SignupSchema(Schema):
 
 
 class LoginSchema(Schema):
-    """Schema for login request validation."""
-    email = fields.Email(required=True)
+    """Schema for login request validation.
+
+    Accepts either ``username`` or ``email`` plus a password. This keeps the
+    legacy ``/api/auth/login`` contract working with existing test fixtures
+    while still allowing modern clients to authenticate with email.
+    """
+    username = fields.Str(load_default=None, validate=validate.Length(min=1, max=80))
+    email = fields.Email(load_default=None)
     password = fields.Str(required=True)
+
+    def validate_identifier(self, data, **_kwargs):
+        if not data.get('username') and not data.get('email'):
+            from marshmallow import ValidationError
+            raise ValidationError('Either username or email is required')
 
