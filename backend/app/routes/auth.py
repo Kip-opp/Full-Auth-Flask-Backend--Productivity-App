@@ -76,7 +76,7 @@ def login():
     except ValidationError as err:
         return validation_error_response(err.messages, 400)
 
-    identifier = data.get('username') or data.get('email')
+    identifier = data.get('identifier') or data.get('username') or data.get('email')
     user = User.query.filter(
         (User.email == identifier) | (User.username == identifier)
     ).first()

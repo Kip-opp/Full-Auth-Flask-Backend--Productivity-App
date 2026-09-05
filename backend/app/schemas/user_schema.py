@@ -1,5 +1,5 @@
 """User-related Marshmallow schemas."""
-from marshmallow import Schema, fields, validate
+from marshmallow import Schema, ValidationError, fields, validate, validates_schema
 
 
 class UserSchema(Schema):
@@ -33,16 +33,17 @@ class SignupSchema(Schema):
 class LoginSchema(Schema):
     """Schema for login request validation.
 
-    Accepts either ``username`` or ``email`` plus a password. This keeps the
-    legacy ``/api/auth/login`` contract working with existing test fixtures
-    while still allowing modern clients to authenticate with email.
+    ``identifier`` accepts either a username or an email address. The legacy
+    fields remain accepted temporarily so older clients can migrate without
+    an authentication outage.
     """
+    identifier = fields.Str(load_default=None, validate=validate.Length(min=1, max=120))
     username = fields.Str(load_default=None, validate=validate.Length(min=1, max=80))
     email = fields.Email(load_default=None)
     password = fields.Str(required=True)
 
+    @validates_schema
     def validate_identifier(self, data, **_kwargs):
-        if not data.get('username') and not data.get('email'):
-            from marshmallow import ValidationError
-            raise ValidationError('Either username or email is required')
+        if not data.get('identifier') and not data.get('username') and not data.get('email'):
+            raise ValidationError({'identifier': ['Identifier is required']})
 

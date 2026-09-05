@@ -87,6 +87,24 @@ class TestLogin:
         
         assert response.status_code == 401
 
+    def test_login_with_username_identifier(self, client, demo_user):
+        response = client.post('/api/auth/login', json={
+            'identifier': 'testuser',
+            'password': 'password123'
+        })
+
+        assert response.status_code == 200
+        assert json.loads(response.data)['success'] is True
+
+    def test_login_with_email_identifier(self, client, demo_user):
+        response = client.post('/api/auth/login', json={
+            'identifier': 'test@example.com',
+            'password': 'password123'
+        })
+
+        assert response.status_code == 200
+        assert json.loads(response.data)['success'] is True
+
 
 class TestLogout:
     """Test user logout endpoint."""
