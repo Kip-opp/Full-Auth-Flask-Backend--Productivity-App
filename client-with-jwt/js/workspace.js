@@ -16,9 +16,10 @@ const workspaceModule = (() => {
         notes: [],
         queries: [],
         artifacts: [],
-        currentPage: 'overview',
+        currentPage: null,
         activeQuery: null,
         jobPollers: new Set(),
+        guest: false,
     };
 
     const PAGES = {
@@ -102,17 +103,27 @@ const workspaceModule = (() => {
         </a>`;
     }
 
-    async function init(currentUser) {
+    async function init(currentUser, options = {}) {
         const container = document.getElementById('dashboard-container');
         container.innerHTML = mount();
+        state.guest = Boolean(options.guest);
 
         document.getElementById('ws-account-name').textContent =
-            currentUser ? currentUser.username : '';
+            currentUser ? currentUser.username : 'Guest preview';
 
-        await loadWorkspaces();
+        if (state.guest) {
+            loadDemoWorkspace(options.demo);
+            document.getElementById('ws-new-btn').textContent = 'Sign in to create';
+            document.getElementById('ws-logout').textContent = 'Sign in';
+        } else {
+            await loadWorkspaces();
+        }
 
         document.getElementById('ws-new-btn').addEventListener('click', onNewWorkspace);
-        document.getElementById('ws-logout').addEventListener('click', () => authModule.confirmLogout());
+        document.getElementById('ws-logout').addEventListener('click', () => {
+            if (state.guest) authModule.requireAuth();
+            else authModule.confirmLogout();
+        });
         document.getElementById('ws-ask-btn').addEventListener('click', () => navigate('ask'));
         document.getElementById('ws-nav-toggle').addEventListener('click', toggleSidebar);
         document.getElementById('ws-backdrop').addEventListener('click', closeSidebar);
@@ -130,6 +141,21 @@ const workspaceModule = (() => {
         });
 
         navigate('overview');
+    }
+
+    function loadDemoWorkspace(demo) {
+        const workspace = demo && demo.workspace;
+        if (!workspace) return;
+        state.workspaceId = workspace.id;
+        state.workspaceName = workspace.name;
+        state.sources = demo.sources || [];
+        state.notes = demo.notes || [];
+        state.artifacts = demo.artifacts || [];
+        state.queries = demo.queries || [];
+        document.getElementById('ws-bc-workspace').textContent = state.workspaceName;
+        const select = document.getElementById('ws-switcher');
+        select.innerHTML = `<option value="demo">${escapeHtml(state.workspaceName)}</option>`;
+        select.disabled = true;
     }
 
     async function loadWorkspaces() {
@@ -150,6 +176,10 @@ const workspaceModule = (() => {
     }
 
     async function onNewWorkspace(silent = false) {
+        if (state.guest) {
+            authModule.requireAuth();
+            return null;
+        }
         const name = silent ? 'My Notebook' : (window.prompt('Workspace name', 'New workspace') || '').trim();
         if (!name) return null;
         try {
@@ -244,7 +274,7 @@ const workspaceModule = (() => {
     }
 
     async function refreshWorkspace() {
-        if (!state.workspaceId) return;
+        if (!state.workspaceId || state.guest) return;
         try {
             const [src, notes, arts, qs] = await Promise.all([
                 api.listSources(state.workspaceId),
@@ -343,7 +373,11 @@ const workspaceModule = (() => {
                         <p class="ws-page-sub">Import HTTP(S) URLs. Sources are ingested in the background and remain private to you.</p>
                     </div>
                 </header>
-                <form class="ws-card ws-form" id="ws-source-form" novalidate>
+                ${state.guest ? `<div class="ws-card ws-state ws-guest-prompt">
+                    <h3>Explore sources in this demo</h3>
+                    <p>Sign in when you are ready to add your own sources.</p>
+                    <button class="btn btn-primary" type="button" id="ws-source-signin">Sign in to add a source</button>
+                </div>` : `<form class="ws-card ws-form" id="ws-source-form" novalidate>
                     <div class="ws-form-row">
                         <label for="ws-src-url">Source URL</label>
                         <input id="ws-src-url" name="url" type="url" required maxlength="2048"
@@ -357,12 +391,14 @@ const workspaceModule = (() => {
                     <div class="ws-form-actions">
                         <button class="btn btn-primary" type="submit">Queue source</button>
                     </div>
-                </form>
+                </form>`}
                 <div class="ws-card-list" id="ws-source-list" aria-live="polite"></div>
             </div>
         `;
         const form = document.getElementById('ws-source-form');
-        form.addEventListener('submit', onCreateSource);
+        if (form) form.addEventListener('submit', onCreateSource);
+        const signIn = document.getElementById('ws-source-signin');
+        if (signIn) signIn.addEventListener('click', () => authModule.requireAuth());
 
         const list = document.getElementById('ws-source-list');
         if (state.sources.length === 0) {
@@ -392,10 +428,10 @@ const workspaceModule = (() => {
                 </div>
                 <div class="ws-source-meta">
                     <span class="${statusClass}">${escapeHtml(s.status)}</span>
-                    <div class="ws-row-actions">
+                    ${state.guest ? '' : `<div class="ws-row-actions">
                         <button class="btn btn-ghost btn-sm" type="button" data-action="resync" data-id="${s.id}">Re-sync</button>
                         <button class="btn btn-danger btn-sm" type="button" data-action="delete" data-id="${s.id}">Delete</button>
-                    </div>
+                    </div>`}
                 </div>
             </article>
         `;
@@ -403,6 +439,7 @@ const workspaceModule = (() => {
 
     async function onCreateSource(e) {
         e.preventDefault();
+        if (!authModule.requireAuth()) return;
         const url = document.getElementById('ws-src-url').value.trim();
         const title = document.getElementById('ws-src-title').value.trim();
         if (!url) {
@@ -423,6 +460,7 @@ const workspaceModule = (() => {
     }
 
     async function onDeleteSource(id) {
+        if (!authModule.requireAuth()) return;
         if (!window.confirm('Delete this source? Generated artifacts will keep their citations.')) return;
         try {
             await api.deleteSource(state.workspaceId, id);
@@ -434,6 +472,7 @@ const workspaceModule = (() => {
     }
 
     async function onResyncSource(id) {
+        if (!authModule.requireAuth()) return;
         try {
             const response = await api.resyncSource(state.workspaceId, id);
             const job = response.data.job;
@@ -496,7 +535,11 @@ const workspaceModule = (() => {
                         <p class="ws-page-sub">Notes are searchable by Ask notebook. Archive notes to remove them from the default scope.</p>
                     </div>
                 </header>
-                <form class="ws-card ws-form" id="ws-note-form" novalidate>
+                ${state.guest ? `<div class="ws-card ws-state ws-guest-prompt">
+                    <h3>Read the demo notes</h3>
+                    <p>Sign in when you are ready to capture your own thinking.</p>
+                    <button class="btn btn-primary" type="button" id="ws-note-signin">Sign in to write a note</button>
+                </div>` : `<form class="ws-card ws-form" id="ws-note-form" novalidate>
                     <div class="ws-form-row">
                         <label for="ws-note-title">Title</label>
                         <input id="ws-note-title" name="title" type="text" required maxlength="255"
@@ -510,11 +553,14 @@ const workspaceModule = (() => {
                     <div class="ws-form-actions">
                         <button class="btn btn-primary" type="submit">Save note</button>
                     </div>
-                </form>
+                </form>`}
                 <div class="ws-card-list" id="ws-note-list" aria-live="polite"></div>
             </div>
         `;
-        document.getElementById('ws-note-form').addEventListener('submit', onCreateNote);
+        const noteForm = document.getElementById('ws-note-form');
+        if (noteForm) noteForm.addEventListener('submit', onCreateNote);
+        const noteSignIn = document.getElementById('ws-note-signin');
+        if (noteSignIn) noteSignIn.addEventListener('click', () => authModule.requireAuth());
         const list = document.getElementById('ws-note-list');
         if (state.notes.length === 0) {
             list.innerHTML = `<div class="ws-state ws-state-empty">
@@ -541,12 +587,12 @@ const workspaceModule = (() => {
                 </div>
                 <div class="ws-note-meta">
                     <span class="ws-status ws-status-${n.status}">${escapeHtml(n.status)}</span>
-                    <div class="ws-row-actions">
+                    ${state.guest ? '' : `<div class="ws-row-actions">
                         ${n.status === 'active'
                             ? `<button class="btn btn-ghost btn-sm" type="button" data-action="archive" data-id="${n.id}">Archive</button>`
                             : ''}
                         <button class="btn btn-danger btn-sm" type="button" data-action="delete" data-id="${n.id}">Delete</button>
-                    </div>
+                    </div>`}
                 </div>
             </article>
         `;
@@ -554,6 +600,7 @@ const workspaceModule = (() => {
 
     async function onCreateNote(e) {
         e.preventDefault();
+        if (!authModule.requireAuth()) return;
         const title = document.getElementById('ws-note-title').value.trim();
         const content = document.getElementById('ws-note-content').value;
         if (!title) {
@@ -572,6 +619,7 @@ const workspaceModule = (() => {
     }
 
     async function onArchiveNote(id) {
+        if (!authModule.requireAuth()) return;
         try {
             await api.updateNote(state.workspaceId, id, { status: 'archived' });
             showSuccess('Note archived');
@@ -582,6 +630,7 @@ const workspaceModule = (() => {
     }
 
     async function onDeleteNote(id) {
+        if (!authModule.requireAuth()) return;
         if (!window.confirm('Delete this notebook note?')) return;
         try {
             await api.deleteNote(state.workspaceId, id);
@@ -629,7 +678,7 @@ const workspaceModule = (() => {
                         </div>
                     </div>
                     <div class="ws-form-actions">
-                        <button class="btn btn-primary" type="submit">Ask</button>
+                        <button class="btn btn-primary" type="submit">${state.guest ? 'Sign in to ask' : 'Ask'}</button>
                     </div>
                 </form>
                 <section class="ws-card ws-answer" id="ws-answer" hidden></section>
@@ -669,6 +718,7 @@ const workspaceModule = (() => {
 
     async function onAsk(e) {
         e.preventDefault();
+        if (!authModule.requireAuth()) return;
         const question = document.getElementById('ws-ask-question').value.trim();
         const sourceIds = Array.from(document.getElementById('ws-ask-sources').selectedOptions).map((o) => parseInt(o.value, 10));
         const noteIds = Array.from(document.getElementById('ws-ask-notes').selectedOptions).map((o) => parseInt(o.value, 10));
@@ -748,7 +798,11 @@ const workspaceModule = (() => {
                         <p class="ws-page-sub">Generate from the ready sources you select. Empty selection uses every ready source in this workspace.</p>
                     </div>
                 </header>
-                <form class="ws-card ws-form" id="ws-artifact-form" novalidate>
+                ${state.guest ? `<div class="ws-card ws-state ws-guest-prompt">
+                    <h3>Browse generated examples</h3>
+                    <p>Sign in when you are ready to generate content from your own sources.</p>
+                    <button class="btn btn-primary" type="button" id="ws-artifact-signin">Sign in to generate</button>
+                </div>` : `<form class="ws-card ws-form" id="ws-artifact-form" novalidate>
                     <div class="ws-form-row">
                         <label for="ws-artifact-title">Title</label>
                         <input id="ws-artifact-title" required maxlength="255" placeholder="${escapeAttr(title)} outline" autocomplete="off">
@@ -767,14 +821,17 @@ const workspaceModule = (() => {
                     <div class="ws-form-actions">
                         <button class="btn btn-primary" type="submit">Generate</button>
                     </div>
-                </form>
+                </form>`}
                 <section class="ws-artifact-history" aria-label="History">
                     <h2 class="ws-section-title">History</h2>
                     <div class="ws-card-list" id="ws-artifact-list"></div>
                 </section>
             </div>
         `;
-        document.getElementById('ws-artifact-form').addEventListener('submit', (e) => onCreateArtifact(e, type));
+        const artifactForm = document.getElementById('ws-artifact-form');
+        if (artifactForm) artifactForm.addEventListener('submit', (e) => onCreateArtifact(e, type));
+        const artifactSignIn = document.getElementById('ws-artifact-signin');
+        if (artifactSignIn) artifactSignIn.addEventListener('click', () => authModule.requireAuth());
         const list = document.getElementById('ws-artifact-list');
         if (existing.length === 0) {
             list.innerHTML = `<div class="ws-state ws-state-empty">
@@ -785,7 +842,10 @@ const workspaceModule = (() => {
         }
         list.innerHTML = existing.map((a) => artifactCard(a)).join('');
         list.querySelectorAll('[data-action="view"]').forEach((el) => {
-            el.addEventListener('click', () => onViewArtifact(parseInt(el.dataset.id, 10)));
+            el.addEventListener('click', () => {
+                const id = state.guest ? el.dataset.id : parseInt(el.dataset.id, 10);
+                onViewArtifact(id);
+            });
         });
     }
 
@@ -823,6 +883,7 @@ const workspaceModule = (() => {
 
     async function onCreateArtifact(e, type) {
         e.preventDefault();
+        if (!authModule.requireAuth()) return;
         const title = document.getElementById('ws-artifact-title').value.trim();
         const instructions = document.getElementById('ws-artifact-instructions').value;
         const sourceIds = Array.from(document.getElementById('ws-artifact-sources').selectedOptions).map((o) => parseInt(o.value, 10));
@@ -846,8 +907,11 @@ const workspaceModule = (() => {
 
     async function onViewArtifact(id) {
         try {
-            const response = await api.getArtifact(state.workspaceId, id);
+            const response = state.guest
+                ? { data: state.artifacts.find((artifact) => artifact.id === id) }
+                : await api.getArtifact(state.workspaceId, id);
             const a = response.data;
+            if (!a) return;
             const parsed = a.content ? JSON.parse(a.content) : null;
             const modal = document.createElement('div');
             modal.className = 'modal open';
@@ -909,6 +973,10 @@ const workspaceModule = (() => {
     // Legacy notes/archived pages proxy to notesModule but scoped to the
     // current workspace's user. They preserve the original behaviour.
     async function renderLegacyNotes() {
+        if (state.guest) {
+            await renderNotebookNotes();
+            return;
+        }
         await refreshWorkspace();
         const content = document.getElementById('ws-content');
         try {
@@ -933,6 +1001,10 @@ const workspaceModule = (() => {
     }
 
     async function renderLegacyArchived() {
+        if (state.guest) {
+            await renderNotebookNotes();
+            return;
+        }
         await refreshWorkspace();
         const content = document.getElementById('ws-content');
         try {
