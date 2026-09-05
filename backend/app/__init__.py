@@ -35,6 +35,7 @@ def create_app(config=None):
         jobs_bp,
         workspace_notes_bp,
         queries_bp,
+        demo_bp,
     )
     app.register_blueprint(auth_bp)
     app.register_blueprint(notes_bp)
@@ -44,6 +45,7 @@ def create_app(config=None):
     app.register_blueprint(jobs_bp)
     app.register_blueprint(workspace_notes_bp)
     app.register_blueprint(queries_bp)
+    app.register_blueprint(demo_bp)
 
     from app.cli import register_cli
     register_cli(app)

@@ -7,6 +7,7 @@ from app.routes.artifacts_v1 import artifacts_bp
 from app.routes.jobs_v1 import jobs_bp
 from app.routes.notes_v1 import notes_bp as workspace_notes_bp
 from app.routes.queries_v1 import queries_bp
+from app.routes.demo import demo_bp
 
 __all__ = [
     'auth_bp',
@@ -17,4 +18,5 @@ __all__ = [
     'jobs_bp',
     'workspace_notes_bp',
     'queries_bp',
+    'demo_bp',
 ]
