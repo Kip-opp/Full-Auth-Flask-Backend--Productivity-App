@@ -120,7 +120,7 @@ _EXAMPLE_BODIES = {
     "SignupRequest": _import_json(
         {"username": "alice", "email": "alice@example.com", "password": "password123"}
     ),
-    "LoginRequest": _import_json({"email": "alice@example.com", "password": "password123"}),
+    "LoginRequest": _import_json({"identifier": "alice", "password": "password123"}),
     "WorkspaceCreateRequest": _import_json(
         {"name": "API development notebook", "description": "Backend-only smoke test"}
     ),

@@ -26,6 +26,8 @@ servers:
     description: Local development
 tags:
   - name: Health
+  - name: Demo
+    description: Curated read-only content available before sign-in.
   - name: Auth
     description: Legacy authentication endpoints.
   - name: Notes
@@ -61,6 +63,18 @@ paths:
                   status:
                     type: string
                     enum: [ok]
+  /api/demo/workspace:
+    get:
+      tags: [Demo]
+      summary: Load the public read-only demo workspace
+      security: []
+      responses:
+        "200":
+          description: Curated demo workspace snapshot
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DemoWorkspaceResponse"
   /api/auth/signup:
     post:
       tags: [Auth]
@@ -1010,6 +1024,20 @@ components:
         - type: object
           properties:
             data: { nullable: true }
+    DemoWorkspaceResponse:
+      allOf:
+        - $ref: "#/components/schemas/SuccessEnvelope"
+        - type: object
+          properties:
+            data:
+              type: object
+              required: [workspace, sources, notes, queries, artifacts]
+              properties:
+                workspace: { type: object }
+                sources: { type: array, items: { type: object } }
+                notes: { type: array, items: { type: object } }
+                queries: { type: array, items: { type: object } }
+                artifacts: { type: array, items: { type: object } }
     ErrorEnvelope:
       type: object
       required: [success, error]
@@ -1049,10 +1077,12 @@ components:
         password: { type: string, minLength: 8 }
     LoginRequest:
       type: object
-      required: [password]
+      required: [identifier, password]
       properties:
-        username: { type: string, maxLength: 80 }
-        email: { type: string, format: email }
+        identifier:
+          type: string
+          maxLength: 120
+          description: Username or email address
         password: { type: string }
     AuthResponse:
       allOf:
