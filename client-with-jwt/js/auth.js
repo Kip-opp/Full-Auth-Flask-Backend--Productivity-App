@@ -36,7 +36,7 @@ const authModule = (() => {
                 api.clearToken();
             }
         }
-        showAuth();
+        await showGuest();
     };
 
     async function detectGoogle() {
@@ -54,11 +54,21 @@ const authModule = (() => {
         renderAuthPage();
     }
 
-    function showDashboard() {
+    async function showGuest() {
+        try {
+            const response = await api.getDemoWorkspace();
+            currentUser = null;
+            showDashboard(null, { guest: true, demo: response.data });
+        } catch (error) {
+            showAuth();
+        }
+    }
+
+    function showDashboard(user = currentUser, options = {}) {
+        currentUser = user;
         document.getElementById('auth-container').style.display = 'none';
         document.getElementById('dashboard-container').style.display = 'block';
-        renderDashboard();
-        workspaceModule.init(currentUser);
+        workspaceModule.init(currentUser, options);
     }
 
     function renderAuthPage() {
@@ -113,8 +123,8 @@ const authModule = (() => {
                                     </div>
                                 ` : ''}
                                 <div class="auth-field">
-                                    <label for="auth-email">${isSignup ? 'Email' : 'Email or username'}</label>
-                                    <input id="auth-email" name="email" type="${isSignup ? 'email' : 'text'}" required autocomplete="email" placeholder="${isSignup ? 'you@example.com' : 'you@example.com'}">
+                                    <label for="auth-identifier">${isSignup ? 'Email' : 'Email or username'}</label>
+                                    <input id="auth-identifier" name="${isSignup ? 'email' : 'identifier'}" type="${isSignup ? 'email' : 'text'}" required autocomplete="${isSignup ? 'email' : 'username'}" placeholder="${isSignup ? 'you@example.com' : 'you@example.com'}">
                                 </div>
                                 <div class="auth-field">
                                     <label for="auth-password">Password</label>
@@ -164,14 +174,14 @@ const authModule = (() => {
         const submit = document.getElementById('auth-submit-btn');
         submit.disabled = true;
         try {
-            const email = document.getElementById('auth-email').value.trim();
+            const identifier = document.getElementById('auth-identifier').value.trim();
             const password = document.getElementById('auth-password').value;
             let response;
             if (isSignup) {
                 const username = document.getElementById('auth-username').value.trim();
-                response = await api.signup(username, email, password);
+                response = await api.signup(username, identifier, password);
             } else {
-                response = await api.login(email, password);
+                response = await api.login(identifier, password);
             }
             api.setToken(response.data.token);
             currentUser = response.data.user;
@@ -263,6 +273,14 @@ const authModule = (() => {
         }
     }
 
+    function requireAuth() {
+        if (!currentUser) {
+            showAuth();
+            return false;
+        }
+        return true;
+    }
+
     function confirmLogout() {
         const confirmed = window.confirm('Sign out of your notebook?');
         if (confirmed) logout();
@@ -270,7 +288,7 @@ const authModule = (() => {
 
     function getCurrentUser() { return currentUser; }
 
-    return { init, logout, confirmLogout, getCurrentUser, showDashboard };
+    return { init, logout, confirmLogout, getCurrentUser, showDashboard, requireAuth };
 })();
 
 function renderDashboard() {

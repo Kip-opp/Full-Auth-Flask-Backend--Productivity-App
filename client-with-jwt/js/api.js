@@ -37,9 +37,10 @@ class APIService {
 
     async request(endpoint, options = {}) {
         const url = `${API_URL}${endpoint}`;
+        const { silent = false, ...requestOptions } = options;
         const config = {
             headers: this.getHeaders(),
-            ...options,
+            ...requestOptions,
         };
 
         try {
@@ -54,7 +55,7 @@ class APIService {
 
             return data;
         } catch (error) {
-            console.error('API Error:', error);
+            if (!silent) console.error('API Error:', error);
             throw error;
         }
     }
@@ -67,10 +68,10 @@ class APIService {
         });
     }
 
-    async login(email, password) {
+    async login(identifier, password) {
         return this.request('/auth/login', {
             method: 'POST',
-            body: JSON.stringify({ email, password }),
+            body: JSON.stringify({ identifier, password }),
         });
     }
 
@@ -82,7 +83,7 @@ class APIService {
     }
 
     async googleConfig() {
-        return this.request('/auth/google/config', { method: 'GET' });
+        return this.request('/auth/google/config', { method: 'GET', silent: true });
     }
 
     async logout() {
@@ -95,6 +96,10 @@ class APIService {
         return this.request('/auth/me', {
             method: 'GET',
         });
+    }
+
+    async getDemoWorkspace() {
+        return this.request('/demo/workspace', { method: 'GET' });
     }
 
     // Notes endpoints
