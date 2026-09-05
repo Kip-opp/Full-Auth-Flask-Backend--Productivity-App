@@ -30,9 +30,14 @@ API=http://localhost:5000 bash api/collections/curl/smoke.sh
 
 The script intentionally avoids printing the JWT to stdout.
 
+The browser opens with the public read-only demo at `GET /api/demo/workspace`.
+Workspace mutations, questions, source ingestion, and generated content remain
+private and require a bearer token.
+
 ## Versioning policy
 
-- New routes go under `/api/v1/*`. The legacy `/api/auth/*` and
+- Private workspace routes go under `/api/v1/*`. The public read-only demo is
+  exposed at `/api/demo/workspace`; the legacy `/api/auth/*` and
   `/api/notes/*` contracts remain unchanged.
 - When a route shape changes, update `openapi.yaml` first, regenerate
   the Bruno collection, then update the backend.

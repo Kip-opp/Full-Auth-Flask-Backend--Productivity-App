@@ -2,8 +2,9 @@
 
 This document describes the source-grounded Notebook workspace layered on
 top of the existing Flask authentication and notes application. The legacy
-`/api/auth/*` and `/api/notes/*` contracts are preserved; everything new
-lives under `/api/v1/*`.
+`/api/auth/*` and `/api/notes/*` contracts are preserved; private workspace
+capabilities live under `/api/v1/*` and the curated read-only demo lives under
+`/api/demo/workspace`.
 
 ## Goals
 
@@ -64,6 +65,11 @@ backend/
 The standard envelope is `{success, message, data}` on success and
 `{success, error: {code, message, details?}}` on failure. New endpoints
 are versioned under `/api/v1`.
+
+Unauthenticated visitors receive a fixed demo snapshot from
+`GET /api/demo/workspace`. It is not backed by a user-owned workspace and
+cannot be used to read arbitrary IDs. The client keeps the demo read-only;
+sign-in is required for notes, source ingestion, questions, and generation.
 
 | Method | Endpoint | Notes |
 | --- | --- | --- |

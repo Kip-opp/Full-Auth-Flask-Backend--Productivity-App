@@ -1,4 +1,4 @@
-# Full-Stack Notes Application
+#  Notes Application
 
 ## Notebook workspace
 
@@ -133,7 +133,7 @@ Before setting up the application, ensure you have the following installed:
 
 1. **Clone the repository:**
    ```bash
-   git clone https://github.com/Kip-opp/Full-Auth-Flask-Backend--Productivity-App
+   git clone https://github.com/Kip-opp/NOTESAPP--full-auth
    cd Full-Auth-Flask-Backend--Productivity-App
    ```
 
@@ -309,7 +309,7 @@ The API follows RESTful conventions with JSON request/response formats. All prot
 - **Request Body**:
   ```json
   {
-    "email": "john@example.com",
+    "identifier": "johndoe",
     "password": "securepassword123"
   }
   ```
@@ -524,7 +524,7 @@ While you can manually create requests, consider importing a Postman collection 
 3. Set body:
    ```json
    {
-     "email": "test@example.com",
+     "identifier": "test_user",
      "password": "password123"
    }
    ```
